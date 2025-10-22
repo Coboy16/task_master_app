@@ -1,4 +1,4 @@
-package com.example.task_master
+package com.coboy.task_master
 
 import io.flutter.embedding.android.FlutterActivity
 
