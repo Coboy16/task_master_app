@@ -12,9 +12,7 @@ part 'create_task_controller.g.dart';
 @riverpod
 class CreateTaskController extends _$CreateTaskController {
   @override
-  Future<void> build() async {
-    // No hace nada al construir
-  }
+  Future<void> build() async {}
 
   String? _getCurrentUserId() {
     final authState = ref.read(authProvider).value;

@@ -9,9 +9,7 @@ part 'update_task_controller.g.dart';
 @riverpod
 class UpdateTaskController extends _$UpdateTaskController {
   @override
-  Future<void> build() async {
-    // No hace nada al construir
-  }
+  Future<void> build() async {}
 
   Future<bool> updateTask(TaskEntitie task) async {
     state = const AsyncValue.loading();
@@ -29,7 +27,6 @@ class UpdateTaskController extends _$UpdateTaskController {
         },
         (updatedTask) {
           if (kDebugMode) print('Tarea actualizada: ${updatedTask.id}');
-          // Recargar lista de tareas
           ref.read(tasksProvider.notifier).loadTasks();
           state = const AsyncValue.data(null);
           return true;

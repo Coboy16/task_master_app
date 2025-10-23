@@ -8,9 +8,7 @@ part 'delete_task_controller.g.dart';
 @riverpod
 class DeleteTaskController extends _$DeleteTaskController {
   @override
-  Future<void> build() async {
-    // No hace nada
-  }
+  Future<void> build() async {}
 
   Future<bool> deleteTask(String taskId) async {
     state = const AsyncValue.loading();
@@ -25,7 +23,6 @@ class DeleteTaskController extends _$DeleteTaskController {
       },
       (_) {
         if (kDebugMode) print('Tarea eliminada exitosamente');
-        // Recargar la lista
         ref.read(tasksProvider.notifier).loadTasks();
         state = const AsyncValue.data(null);
         return true;

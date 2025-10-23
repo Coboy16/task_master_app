@@ -9,9 +9,7 @@ part 'sync_tasks_controller.g.dart';
 @riverpod
 class SyncTasksController extends _$SyncTasksController {
   @override
-  Future<void> build() async {
-    // No hace nada
-  }
+  Future<void> build() async {}
 
   String? _getCurrentUserId() {
     final authState = ref.read(authProvider).value;

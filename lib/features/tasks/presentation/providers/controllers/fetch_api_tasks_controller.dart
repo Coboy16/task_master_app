@@ -9,9 +9,7 @@ part 'fetch_api_tasks_controller.g.dart';
 @riverpod
 class FetchApiTasksController extends _$FetchApiTasksController {
   @override
-  Future<void> build() async {
-    // No hace nada
-  }
+  Future<void> build() async {}
 
   String? _getCurrentUserId() {
     final authState = ref.read(authProvider).value;
@@ -35,14 +33,14 @@ class FetchApiTasksController extends _$FetchApiTasksController {
 
     return result.fold(
       (failure) {
-        if (kDebugMode)
+        if (kDebugMode) {
           print('Error al traer tareas de API: ${failure.message}');
+        }
         state = AsyncValue.error(failure.message, StackTrace.current);
         return false;
       },
       (tasks) {
         if (kDebugMode) print('${tasks.length} tareas traídas desde la API');
-        // Recargar la lista
         ref.read(tasksProvider.notifier).loadTasks();
         state = const AsyncValue.data(null);
         return true;

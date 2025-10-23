@@ -8,9 +8,7 @@ part 'toggle_task_controller.g.dart';
 @riverpod
 class ToggleTaskController extends _$ToggleTaskController {
   @override
-  Future<void> build() async {
-    // No hace nada
-  }
+  Future<void> build() async {}
 
   Future<bool> toggleTaskCompletion(String taskId) async {
     state = const AsyncValue.loading();
@@ -25,7 +23,6 @@ class ToggleTaskController extends _$ToggleTaskController {
       },
       (updatedTask) {
         if (kDebugMode) print('Estado de tarea actualizado');
-        // Recargar la lista
         ref.read(tasksProvider.notifier).loadTasks();
         state = const AsyncValue.data(null);
         return true;
