@@ -7,10 +7,6 @@ import 'auth_usecases_provider.dart';
 
 part 'auth_provider.g.dart';
 
-// ==================== AUTH NOTIFIER (State Management) ====================
-
-/// Provider principal de autenticación usando AsyncNotifier con generación de código
-/// Este provider AHORA SOLO maneja el estado de autenticación GLOBAL.
 @Riverpod(keepAlive: true)
 class Auth extends _$Auth {
   @override
@@ -111,7 +107,4 @@ class Auth extends _$Auth {
     }
   }
 
-  // --- MÉTODOS REMOVIDOS ---
-  // loginWithEmail, registerWithEmail, createGuestUser, y migrateGuestToAuth
-  // AHORA ESTÁN EN SUS PROPIOS CONTROLLERS (Login, Register, Guest, LinkAccount)
 }

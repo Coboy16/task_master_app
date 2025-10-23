@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '/core/core.dart';
 import '../providers/providers.dart';
+import '../widgets/logo_widget.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -12,18 +14,39 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
+    _initializeAnimation();
     _checkAuthStatus();
   }
 
-  /// Verificar estado de autenticación al iniciar
-  Future<void> _checkAuthStatus() async {
-    // Esperar mínimo 2 segundos para mejor UX
-    await Future.delayed(const Duration(seconds: 2));
+  void _initializeAnimation() {
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
 
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
       await ref.read(authProvider.notifier).checkAuthStatus();
     }
@@ -31,68 +54,64 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Escuchar cambios en el estado de auth
     ref.listen<AsyncValue<AuthState>>(authProvider, (_, state) {
       state.whenData((authState) {
         authState.when(
-          initial: () {}, // No hacer nada
-          loading: () {}, // Mostrar loading
+          initial: () {},
+          loading: () {},
           authenticated: (_) {
-            // Usuario autenticado → Navegar a HOME
-            if (mounted) {
-              context.go(RouteNames.home);
-            }
+            if (mounted) context.go(RouteNames.home);
           },
           unauthenticated: () {
-            // Sin sesión → Navegar a LOGIN
-            if (mounted) {
-              context.go(RouteNames.login);
-            }
+            if (mounted) context.go(RouteNames.login);
           },
           error: (message) {
-            // En caso de error, ir a LOGIN
-            if (mounted) {
-              context.go(RouteNames.login);
-            }
+            if (mounted) context.go(RouteNames.login);
           },
         );
       });
     });
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo o ícono de la app
-            Icon(
-              Icons.task_alt,
-              size: 80,
-              color: Theme.of(context).primaryColor,
-            ),
-            const SizedBox(height: 24),
-
-            // Nombre de la app
-            Text(
-              'TaskMaster Pro',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-
-            // Tagline
-            Text(
-              'Organiza tus tareas',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 48),
-
-            // Loading indicator
-            const CircularProgressIndicator(),
-          ],
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const LogoWidget(size: 80),
+              const SizedBox(height: 32),
+              Text(
+                'TaskMaster',
+                style: GoogleFonts.inter(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1a1a1a),
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Organiza tu día',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFF6b7280),
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 48),
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2800C8)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

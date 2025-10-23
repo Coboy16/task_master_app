@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '/core/core.dart';
 import '../providers/providers.dart';
+import '../widgets/widgets.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -20,178 +24,146 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Escuchar SÓLO errores del controlador de login
     ref.listen<AsyncValue<void>>(loginProvider, (_, state) {
       state.when(
-        data: (_) {}, // Éxito, el authProvider global navegará
-        loading: () {}, // El botón se encarga
+        data: (_) {},
+        loading: () {},
         error: (message, __) {
-          // Mostrar error
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message.toString()),
-                backgroundColor: Colors.red,
-              ),
-            );
+            _showErrorSnackBar(context, message.toString());
           }
         },
       );
     });
 
-    // Observar estado de carga del controlador de login
     final loginState = ref.watch(loginProvider);
     final isLoading = loginState.isLoading;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar sesión'), centerTitle: true),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: FormBuilder(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ... (El resto de tu UI no cambia) ...
-                const SizedBox(height: 32),
-                Text(
-                  'Bienvenido de nuevo',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Ingresa tus credenciales para continuar',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 48),
-
-                // Campo Email
-                FormBuilderTextField(
-                  name: 'email',
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'ejemplo@email.com',
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(
-                      errorText: 'El email es requerido',
-                    ),
-                    FormBuilderValidators.email(errorText: 'Email inválido'),
-                  ]),
-                ),
-                const SizedBox(height: 16),
-
-                // Campo Password
-                FormBuilderTextField(
-                  name: 'password',
-                  decoration: InputDecoration(
-                    labelText: 'Contraseña',
-                    hintText: '••••••••',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isPasswordVisible = !_isPasswordVisible;
-                        });
-                      },
-                    ),
-                    border: const OutlineInputBorder(),
-                  ),
-                  obscureText: !_isPasswordVisible,
-                  textInputAction: TextInputAction.done,
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(
-                      errorText: 'La contraseña es requerida',
-                    ),
-                    FormBuilderValidators.minLength(
-                      6,
-                      errorText:
-                          'La contraseña debe tener al menos 6 caracteres',
-                    ),
-                  ]),
-                  onSubmitted: (_) => _handleLogin(),
-                ),
-                const SizedBox(height: 24),
-
-                // Botón Iniciar sesión
-                ElevatedButton(
-                  onPressed: isLoading ? null : _handleLogin, // Actualizado
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(
-                          'Iniciar sesión',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                ),
-                // ... (El resto de tu UI no cambia) ...
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'O',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ),
-                    const Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () => context.push(RouteNames.register),
-                  child: const Text('¿No tienes cuenta? Regístrate'),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () => context.push(RouteNames.noAccount),
-                  child: Text(
-                    'Continuar sin cuenta',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ),
-              ],
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 40),
+              AuthHeader(
+                title: 'Bienvenido',
+                subtitle: 'Ingresa a tu cuenta para continuar',
+                leading: const LogoWidget(size: 56),
+              ),
+              const SizedBox(height: 48),
+              _buildLoginForm(isLoading),
+            ],
           ),
         ),
       ),
     );
   }
 
-  /// Manejar el login
+  Widget _buildLoginForm(bool isLoading) {
+    return FormBuilder(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          CustomTextField(
+            name: 'email',
+            label: 'Email',
+            hintText: 'tu@email.com',
+            prefixIcon: LucideIcons.mail,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            validator: FormBuilderValidators.compose([
+              FormBuilderValidators.required(
+                errorText: 'El email es requerido',
+              ),
+              FormBuilderValidators.email(errorText: 'Email inválido'),
+            ]),
+          ),
+          const SizedBox(height: 24),
+          CustomTextField(
+            name: 'password',
+            label: 'Contraseña',
+            hintText: '••••••••',
+            prefixIcon: LucideIcons.lock,
+            obscureText: !_isPasswordVisible,
+            textInputAction: TextInputAction.done,
+            suffixIcon: IconButton(
+              icon: Icon(
+                _isPasswordVisible ? LucideIcons.eyeOff : LucideIcons.eye,
+                size: 20,
+                color: const Color(0xFF6b7280),
+              ),
+              onPressed: () {
+                setState(() => _isPasswordVisible = !_isPasswordVisible);
+              },
+            ),
+            validator: FormBuilderValidators.compose([
+              FormBuilderValidators.required(
+                errorText: 'La contraseña es requerida',
+              ),
+              FormBuilderValidators.minLength(
+                6,
+                errorText: 'Mínimo 6 caracteres',
+              ),
+            ]),
+            onSubmitted: (_) => _handleLogin(),
+          ),
+          const SizedBox(height: 32),
+          CustomButton(
+            text: 'Iniciar sesión',
+            onPressed: _handleLogin,
+            isLoading: isLoading,
+          ),
+          const SizedBox(height: 24),
+          _buildDivider(),
+          const SizedBox(height: 24),
+          CustomButton(
+            text: 'Crear cuenta',
+            type: ButtonType.secondary,
+            onPressed: isLoading
+                ? null
+                : () => context.push(RouteNames.register),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: CustomButton(
+              text: 'Continuar sin cuenta',
+              type: ButtonType.text,
+              onPressed: isLoading
+                  ? null
+                  : () => context.push(RouteNames.noAccount),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: Color(0xFFe5e7eb), thickness: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'o',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: const Color(0xFF9ca3af),
+            ),
+          ),
+        ),
+        const Expanded(child: Divider(color: Color(0xFFe5e7eb), thickness: 1)),
+      ],
+    );
+  }
+
   void _handleLogin() {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final values = _formKey.currentState!.value;
-
-      // Llamar al nuevo controlador
       ref
           .read(loginProvider.notifier)
           .loginWithEmail(
@@ -199,5 +171,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: values['password'] as String,
           );
     }
+  }
+
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: const Color(0xFF1a1a1a),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 }

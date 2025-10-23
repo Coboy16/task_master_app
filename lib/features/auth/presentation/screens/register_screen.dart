@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '/core/core.dart';
 import '../providers/providers.dart';
+import '../widgets/widgets.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -21,219 +25,190 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Escuchar SÓLO errores del controlador de registro
     ref.listen<AsyncValue<void>>(registerProvider, (_, state) {
       state.when(
-        data: (_) {}, // Éxito, el authProvider global navegará
-        loading: () {}, // El botón se encarga
+        data: (_) {},
+        loading: () {},
         error: (message, __) {
-          // Mostrar error
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message.toString()),
-                backgroundColor: Colors.red,
-              ),
-            );
+            _showErrorSnackBar(context, message.toString());
           }
         },
       );
     });
 
-    // Observar estado de carga del controlador de registro
     final registerState = ref.watch(registerProvider);
     final isLoading = registerState.isLoading;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Crear cuenta'), centerTitle: true),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(LucideIcons.arrowLeft, color: Color(0xFF1a1a1a)),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: FormBuilder(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 32),
-
-                // Título
-                Text(
-                  'Crea tu cuenta',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Completa tus datos para registrarte',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 48),
-
-                // Campo Nombre
-                FormBuilderTextField(
-                  name: 'name',
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre',
-                    hintText: 'Ingresa tu nombre completo',
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: OutlineInputBorder(),
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(
-                      errorText: 'El nombre es requerido',
-                    ),
-                    FormBuilderValidators.minLength(
-                      2,
-                      errorText: 'El nombre debe tener al menos 2 caracteres',
-                    ),
-                  ]),
-                ),
-                const SizedBox(height: 16),
-
-                // Campo Email
-                FormBuilderTextField(
-                  name: 'email',
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'ejemplo@email.com',
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(
-                      errorText: 'El email es requerido',
-                    ),
-                    FormBuilderValidators.email(errorText: 'Email inválido'),
-                  ]),
-                ),
-                const SizedBox(height: 16),
-
-                // Campo Password
-                FormBuilderTextField(
-                  name: 'password',
-                  decoration: InputDecoration(
-                    labelText: 'Contraseña',
-                    hintText: '••••••••',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isPasswordVisible = !_isPasswordVisible;
-                        });
-                      },
-                    ),
-                    border: const OutlineInputBorder(),
-                    helperText: 'Mínimo 6 caracteres',
-                  ),
-                  obscureText: !_isPasswordVisible,
-                  textInputAction: TextInputAction.next,
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(
-                      errorText: 'La contraseña es requerida',
-                    ),
-                    FormBuilderValidators.minLength(
-                      6,
-                      errorText:
-                          'La contraseña debe tener al menos 6 caracteres',
-                    ),
-                  ]),
-                ),
-                const SizedBox(height: 16),
-
-                // Campo Confirmar Password
-                FormBuilderTextField(
-                  name: 'confirmPassword',
-                  decoration: InputDecoration(
-                    labelText: 'Confirmar contraseña',
-                    hintText: '••••••••',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isConfirmPasswordVisible
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isConfirmPasswordVisible =
-                              !_isConfirmPasswordVisible;
-                        });
-                      },
-                    ),
-                    border: const OutlineInputBorder(),
-                  ),
-                  obscureText: !_isConfirmPasswordVisible,
-                  textInputAction: TextInputAction.done,
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(
-                      errorText: 'Debes confirmar la contraseña',
-                    ),
-                    (val) {
-                      if (_formKey.currentState?.fields['password']?.value !=
-                          val) {
-                        return 'Las contraseñas no coinciden';
-                      }
-                      return null;
-                    },
-                  ]),
-                  onSubmitted: (_) => _handleRegister(),
-                ),
-                const SizedBox(height: 32),
-
-                // Botón Registrarse
-                ElevatedButton(
-                  onPressed: isLoading ? null : _handleRegister,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(
-                          'Registrarse',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                ),
-                const SizedBox(height: 24),
-
-                // Link a iniciar sesión
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () => context.go(RouteNames.login),
-                  child: const Text('¿Ya tienes cuenta? Inicia sesión'),
-                ),
-              ],
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AuthHeader(
+                title: 'Crear cuenta',
+                subtitle: 'Completa tus datos para comenzar',
+              ),
+              const SizedBox(height: 40),
+              _buildRegisterForm(isLoading),
+            ],
           ),
         ),
       ),
     );
   }
 
-  /// Manejar el registro
+  Widget _buildRegisterForm(bool isLoading) {
+    return FormBuilder(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          CustomTextField(
+            name: 'name',
+            label: 'Nombre completo',
+            hintText: 'Tu nombre',
+            prefixIcon: LucideIcons.user,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+            validator: FormBuilderValidators.compose([
+              FormBuilderValidators.required(
+                errorText: 'El nombre es requerido',
+              ),
+              FormBuilderValidators.minLength(
+                2,
+                errorText: 'Mínimo 2 caracteres',
+              ),
+            ]),
+          ),
+          const SizedBox(height: 20),
+          CustomTextField(
+            name: 'email',
+            label: 'Email',
+            hintText: 'tu@email.com',
+            prefixIcon: LucideIcons.mail,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            validator: FormBuilderValidators.compose([
+              FormBuilderValidators.required(
+                errorText: 'El email es requerido',
+              ),
+              FormBuilderValidators.email(errorText: 'Email inválido'),
+            ]),
+          ),
+          const SizedBox(height: 20),
+          CustomTextField(
+            name: 'password',
+            label: 'Contraseña',
+            hintText: '••••••••',
+            prefixIcon: LucideIcons.lock,
+            obscureText: !_isPasswordVisible,
+            textInputAction: TextInputAction.next,
+            suffixIcon: IconButton(
+              icon: Icon(
+                _isPasswordVisible ? LucideIcons.eyeOff : LucideIcons.eye,
+                size: 20,
+                color: const Color(0xFF6b7280),
+              ),
+              onPressed: () {
+                setState(() => _isPasswordVisible = !_isPasswordVisible);
+              },
+            ),
+            validator: FormBuilderValidators.compose([
+              FormBuilderValidators.required(
+                errorText: 'La contraseña es requerida',
+              ),
+              FormBuilderValidators.minLength(
+                6,
+                errorText: 'Mínimo 6 caracteres',
+              ),
+            ]),
+          ),
+          const SizedBox(height: 20),
+          CustomTextField(
+            name: 'confirmPassword',
+            label: 'Confirmar contraseña',
+            hintText: '••••••••',
+            prefixIcon: LucideIcons.lock,
+            obscureText: !_isConfirmPasswordVisible,
+            textInputAction: TextInputAction.done,
+            suffixIcon: IconButton(
+              icon: Icon(
+                _isConfirmPasswordVisible
+                    ? LucideIcons.eyeOff
+                    : LucideIcons.eye,
+                size: 20,
+                color: const Color(0xFF6b7280),
+              ),
+              onPressed: () {
+                setState(
+                  () => _isConfirmPasswordVisible = !_isConfirmPasswordVisible,
+                );
+              },
+            ),
+            validator: FormBuilderValidators.compose([
+              FormBuilderValidators.required(
+                errorText: 'Confirma tu contraseña',
+              ),
+              (val) {
+                if (_formKey.currentState?.fields['password']?.value != val) {
+                  return 'Las contraseñas no coinciden';
+                }
+                return null;
+              },
+            ]),
+            onSubmitted: (_) => _handleRegister(),
+          ),
+          const SizedBox(height: 32),
+          CustomButton(
+            text: 'Crear cuenta',
+            onPressed: _handleRegister,
+            isLoading: isLoading,
+          ),
+          const SizedBox(height: 24),
+          Center(
+            child: TextButton(
+              onPressed: isLoading ? null : () => context.go(RouteNames.login),
+              child: RichText(
+                text: TextSpan(
+                  text: '¿Ya tienes cuenta? ',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: const Color(0xFF6b7280),
+                  ),
+                  children: [
+                    TextSpan(
+                      text: 'Inicia sesión',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF2800C8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handleRegister() {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final values = _formKey.currentState!.value;
-
-      // Llamar al nuevo controlador
       ref
           .read(registerProvider.notifier)
           .registerWithEmail(
@@ -242,5 +217,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             password: values['password'] as String,
           );
     }
+  }
+
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: const Color(0xFF1a1a1a),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 }
