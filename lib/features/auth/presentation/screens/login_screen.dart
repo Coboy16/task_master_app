@@ -20,35 +20,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Escuchar cambios en el estado de auth
-    ref.listen<AsyncValue<AuthState>>(authProvider, (_, state) {
-      state.whenData((authState) {
-        authState.when(
-          initial: () {},
-          loading: () {},
-          authenticated: (_) {
-            // Login exitoso → Navegar a HOME
-            if (mounted) {
-              context.go(RouteNames.home);
-            }
-          },
-          unauthenticated: () {},
-          error: (message) {
-            // Mostrar error
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(message), backgroundColor: Colors.red),
-              );
-            }
-          },
-        );
-      });
+    // Escuchar SÓLO errores del controlador de login
+    ref.listen<AsyncValue<void>>(loginProvider, (_, state) {
+      state.when(
+        data: (_) {}, // Éxito, el authProvider global navegará
+        loading: () {}, // El botón se encarga
+        error: (message, __) {
+          // Mostrar error
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message.toString()),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
     });
 
-    // Verificar si está en loading
-    final authState = ref.watch(authProvider).value;
-    final isLoading =
-        authState?.maybeWhen(loading: () => true, orElse: () => false) ?? false;
+    // Observar estado de carga del controlador de login
+    final loginState = ref.watch(loginProvider);
+    final isLoading = loginState.isLoading;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Iniciar sesión'), centerTitle: true),
@@ -60,9 +53,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ... (El resto de tu UI no cambia) ...
                 const SizedBox(height: 32),
-
-                // Título
                 Text(
                   'Bienvenido de nuevo',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -139,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Botón Iniciar sesión
                 ElevatedButton(
-                  onPressed: isLoading ? null : _handleLogin,
+                  onPressed: isLoading ? null : _handleLogin, // Actualizado
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -154,9 +146,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           style: TextStyle(fontSize: 16),
                         ),
                 ),
+                // ... (El resto de tu UI no cambia) ...
                 const SizedBox(height: 16),
-
-                // Divider con "O"
                 Row(
                   children: [
                     const Expanded(child: Divider()),
@@ -171,8 +162,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // Link a crear cuenta
                 TextButton(
                   onPressed: isLoading
                       ? null
@@ -180,8 +169,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: const Text('¿No tienes cuenta? Regístrate'),
                 ),
                 const SizedBox(height: 8),
-
-                // Link a continuar sin cuenta
                 TextButton(
                   onPressed: isLoading
                       ? null
@@ -204,8 +191,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final values = _formKey.currentState!.value;
 
+      // Llamar al nuevo controlador
       ref
-          .read(authProvider.notifier)
+          .read(loginProvider.notifier)
           .loginWithEmail(
             email: values['email'] as String,
             password: values['password'] as String,

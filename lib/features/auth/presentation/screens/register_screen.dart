@@ -8,9 +8,7 @@ import '/core/core.dart';
 import '../providers/providers.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
-  final String? guestUserId; // Para migración de usuario invitado (futuro)
-
-  const RegisterScreen({super.key, this.guestUserId});
+  const RegisterScreen({super.key});
 
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
@@ -19,38 +17,32 @@ class RegisterScreen extends ConsumerStatefulWidget {
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   Widget build(BuildContext context) {
-    // Escuchar cambios en el estado de auth
-    ref.listen<AsyncValue<AuthState>>(authProvider, (_, state) {
-      state.whenData((authState) {
-        authState.when(
-          initial: () {},
-          loading: () {},
-          authenticated: (_) {
-            // Registro exitoso → Navegar a HOME
-            if (mounted) {
-              context.go(RouteNames.home);
-            }
-          },
-          unauthenticated: () {},
-          error: (message) {
-            // Mostrar error
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(message), backgroundColor: Colors.red),
-              );
-            }
-          },
-        );
-      });
+    // Escuchar SÓLO errores del controlador de registro
+    ref.listen<AsyncValue<void>>(registerProvider, (_, state) {
+      state.when(
+        data: (_) {}, // Éxito, el authProvider global navegará
+        loading: () {}, // El botón se encarga
+        error: (message, __) {
+          // Mostrar error
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message.toString()),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
     });
 
-    // Verificar si está en loading
-    final authState = ref.watch(authProvider).value;
-    final isLoading =
-        authState?.maybeWhen(loading: () => true, orElse: () => false) ?? false;
+    // Observar estado de carga del controlador de registro
+    final registerState = ref.watch(registerProvider);
+    final isLoading = registerState.isLoading;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Crear cuenta'), centerTitle: true),
@@ -74,7 +66,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Completa los datos para comenzar',
+                  'Completa tus datos para registrarte',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
@@ -86,8 +78,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 FormBuilderTextField(
                   name: 'name',
                   decoration: const InputDecoration(
-                    labelText: 'Nombre completo',
-                    hintText: 'Juan Pérez',
+                    labelText: 'Nombre',
+                    hintText: 'Ingresa tu nombre completo',
                     prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
                   ),
@@ -148,7 +140,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     helperText: 'Mínimo 6 caracteres',
                   ),
                   obscureText: !_isPasswordVisible,
-                  textInputAction: TextInputAction.done,
+                  textInputAction: TextInputAction.next,
                   validator: FormBuilderValidators.compose([
                     FormBuilderValidators.required(
                       errorText: 'La contraseña es requerida',
@@ -159,11 +151,50 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           'La contraseña debe tener al menos 6 caracteres',
                     ),
                   ]),
+                ),
+                const SizedBox(height: 16),
+
+                // Campo Confirmar Password
+                FormBuilderTextField(
+                  name: 'confirmPassword',
+                  decoration: InputDecoration(
+                    labelText: 'Confirmar contraseña',
+                    hintText: '••••••••',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isConfirmPasswordVisible
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isConfirmPasswordVisible =
+                              !_isConfirmPasswordVisible;
+                        });
+                      },
+                    ),
+                    border: const OutlineInputBorder(),
+                  ),
+                  obscureText: !_isConfirmPasswordVisible,
+                  textInputAction: TextInputAction.done,
+                  validator: FormBuilderValidators.compose([
+                    FormBuilderValidators.required(
+                      errorText: 'Debes confirmar la contraseña',
+                    ),
+                    (val) {
+                      if (_formKey.currentState?.fields['password']?.value !=
+                          val) {
+                        return 'Las contraseñas no coinciden';
+                      }
+                      return null;
+                    },
+                  ]),
                   onSubmitted: (_) => _handleRegister(),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                // Botón Crear cuenta
+                // Botón Registrarse
                 ElevatedButton(
                   onPressed: isLoading ? null : _handleRegister,
                   style: ElevatedButton.styleFrom(
@@ -176,27 +207,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text(
-                          'Crear cuenta',
+                          'Registrarse',
                           style: TextStyle(fontSize: 16),
                         ),
                 ),
-                const SizedBox(height: 16),
-
-                // Divider con "O"
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'O',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ),
-                    const Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
                 // Link a iniciar sesión
                 TextButton(
@@ -204,18 +219,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ? null
                       : () => context.go(RouteNames.login),
                   child: const Text('¿Ya tienes cuenta? Inicia sesión'),
-                ),
-                const SizedBox(height: 8),
-
-                // Link a continuar sin cuenta
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () => context.push(RouteNames.noAccount),
-                  child: Text(
-                    'Continuar sin cuenta',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
                 ),
               ],
             ),
@@ -230,8 +233,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final values = _formKey.currentState!.value;
 
+      // Llamar al nuevo controlador
       ref
-          .read(authProvider.notifier)
+          .read(registerProvider.notifier)
           .registerWithEmail(
             name: values['name'] as String,
             email: values['email'] as String,

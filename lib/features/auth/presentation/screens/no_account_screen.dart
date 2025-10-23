@@ -19,35 +19,28 @@ class _NoAccountScreenState extends ConsumerState<NoAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Escuchar cambios en el estado de auth
-    ref.listen<AsyncValue<AuthState>>(authProvider, (_, state) {
-      state.whenData((authState) {
-        authState.when(
-          initial: () {},
-          loading: () {},
-          authenticated: (_) {
-            // Usuario invitado creado → Navegar a HOME
-            if (mounted) {
-              context.go(RouteNames.home);
-            }
-          },
-          unauthenticated: () {},
-          error: (message) {
-            // Mostrar error
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(message), backgroundColor: Colors.red),
-              );
-            }
-          },
-        );
-      });
+    // Escuchar SÓLO errores del controlador de invitado
+    ref.listen<AsyncValue<void>>(guestProvider, (_, state) {
+      state.when(
+        data: (_) {}, // Éxito, el authProvider global navegará
+        loading: () {}, // El botón se encarga
+        error: (message, __) {
+          // Mostrar error
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message.toString()),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
     });
 
-    // Verificar si está en loading
-    final authState = ref.watch(authProvider).value;
-    final isLoading =
-        authState?.maybeWhen(loading: () => true, orElse: () => false) ?? false;
+    // Observar estado de carga del controlador de invitado
+    final guestState = ref.watch(guestProvider);
+    final isLoading = guestState.isLoading;
 
     return Scaffold(
       appBar: AppBar(
@@ -62,17 +55,14 @@ class _NoAccountScreenState extends ConsumerState<NoAccountScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ... (El resto de tu UI no cambia) ...
                 const SizedBox(height: 32),
-
-                // Ícono
                 Icon(
                   Icons.person_outline,
                   size: 80,
                   color: Theme.of(context).primaryColor,
                 ),
                 const SizedBox(height: 24),
-
-                // Título
                 Text(
                   'Modo Invitado',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -81,8 +71,6 @@ class _NoAccountScreenState extends ConsumerState<NoAccountScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-
-                // Descripción
                 Text(
                   'Usa la app sin crear cuenta. Tus datos se guardan localmente en este dispositivo.',
                   style: Theme.of(
@@ -118,7 +106,7 @@ class _NoAccountScreenState extends ConsumerState<NoAccountScreen> {
 
                 // Botón Continuar
                 ElevatedButton(
-                  onPressed: isLoading ? null : _handleContinue,
+                  onPressed: isLoading ? null : _handleContinue, // Actualizado
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -130,9 +118,8 @@ class _NoAccountScreenState extends ConsumerState<NoAccountScreen> {
                         )
                       : const Text('Continuar', style: TextStyle(fontSize: 16)),
                 ),
+                // ... (El resto de tu UI no cambia) ...
                 const SizedBox(height: 24),
-
-                // Info adicional
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -157,8 +144,6 @@ class _NoAccountScreenState extends ConsumerState<NoAccountScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Link a crear cuenta
                 TextButton(
                   onPressed: isLoading
                       ? null
@@ -178,7 +163,10 @@ class _NoAccountScreenState extends ConsumerState<NoAccountScreen> {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final values = _formKey.currentState!.value;
 
-      ref.read(authProvider.notifier).createGuestUser(values['name'] as String);
+      // Llamar al nuevo controlador
+      ref
+          .read(guestProvider.notifier)
+          .createGuestUser(values['name'] as String);
     }
   }
 }

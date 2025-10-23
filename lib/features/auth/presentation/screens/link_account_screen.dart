@@ -27,7 +27,7 @@ class _LinkAccountScreenState extends ConsumerState<LinkAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Escuchar cambios en el estado de auth
+    // Escuchar cambios en el estado de auth GLOBAL para NAVEGAR
     ref.listen<AsyncValue<AuthState>>(authProvider, (_, state) {
       state.whenData((authState) {
         authState.when(
@@ -48,7 +48,8 @@ class _LinkAccountScreenState extends ConsumerState<LinkAccountScreen> {
           },
           unauthenticated: () {},
           error: (message) {
-            // Mostrar error
+            // Este error es del authProvider, no de la acción de vincular.
+            // Lo dejamos, aunque es poco probable.
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(message), backgroundColor: Colors.red),
@@ -59,10 +60,28 @@ class _LinkAccountScreenState extends ConsumerState<LinkAccountScreen> {
       });
     });
 
-    // Verificar si está en loading
-    final authState = ref.watch(authProvider).value;
-    final isLoading =
-        authState?.maybeWhen(loading: () => true, orElse: () => false) ?? false;
+    // Escuchar SÓLO errores del controlador de VINCULAR
+    ref.listen<AsyncValue<void>>(linkAccountProvider, (_, state) {
+      state.when(
+        data: (_) {}, // Éxito, el authProvider de arriba navegará
+        loading: () {}, // El botón se encarga
+        error: (message, __) {
+          // Mostrar error de la acción de vincular
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message.toString()),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
+    });
+
+    // Observar estado de carga del controlador de VINCULAR
+    final linkAccountState = ref.watch(linkAccountProvider);
+    final isLoading = linkAccountState.isLoading;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Vincular cuenta'), centerTitle: true),
@@ -74,17 +93,14 @@ class _LinkAccountScreenState extends ConsumerState<LinkAccountScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ... (El resto de tu UI no cambia) ...
                 const SizedBox(height: 32),
-
-                // Ícono
                 Icon(
                   Icons.cloud_upload_outlined,
                   size: 80,
                   color: Theme.of(context).primaryColor,
                 ),
                 const SizedBox(height: 24),
-
-                // Título
                 Text(
                   'Vincula tu cuenta',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -93,8 +109,6 @@ class _LinkAccountScreenState extends ConsumerState<LinkAccountScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-
-                // Descripción
                 Text(
                   'Crea una cuenta en la nube para sincronizar tus tareas y acceder desde cualquier dispositivo.',
                   style: Theme.of(
@@ -103,8 +117,6 @@ class _LinkAccountScreenState extends ConsumerState<LinkAccountScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-
-                // Info del usuario actual
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -204,7 +216,9 @@ class _LinkAccountScreenState extends ConsumerState<LinkAccountScreen> {
 
                 // Botón Vincular cuenta
                 ElevatedButton(
-                  onPressed: isLoading ? null : _handleLinkAccount,
+                  onPressed: isLoading
+                      ? null
+                      : _handleLinkAccount, // Actualizado
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -219,9 +233,8 @@ class _LinkAccountScreenState extends ConsumerState<LinkAccountScreen> {
                           style: TextStyle(fontSize: 16),
                         ),
                 ),
+                // ... (El resto de tu UI no cambia) ...
                 const SizedBox(height: 24),
-
-                // Info adicional
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -278,8 +291,9 @@ class _LinkAccountScreenState extends ConsumerState<LinkAccountScreen> {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final values = _formKey.currentState!.value;
 
+      // Llamar al nuevo controlador
       ref
-          .read(authProvider.notifier)
+          .read(linkAccountProvider.notifier)
           .migrateGuestToAuth(
             guestUserId: widget.guestUserId,
             email: values['email'] as String,

@@ -3,48 +3,64 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '/features/feactures.dart';
-
 import 'route_names.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final authStateAsync = ref.watch(authProvider);
+
   return GoRouter(
     initialLocation: RouteNames.splash,
     debugLogDiagnostics: true,
 
-    // Redirect automático basado en estado de autenticación
     redirect: (context, state) {
-      final authState = ref.read(authProvider).value;
+      final authState = authStateAsync.asData?.value;
+      final currentLocation = state.matchedLocation;
 
-      // Rutas públicas (permitidas sin autenticación)
+      final isStarting =
+          authState == null ||
+          authState.maybeWhen(
+            initial: () => true,
+            loading: () => true,
+            orElse: () => false,
+          );
+
+      if (isStarting) {
+        if (currentLocation == RouteNames.splash) {
+          return null;
+        }
+        return RouteNames.splash;
+      }
+
       final publicRoutes = [
         RouteNames.splash,
         RouteNames.login,
         RouteNames.register,
         RouteNames.noAccount,
       ];
-
-      final currentLocation = state.matchedLocation;
       final isPublicRoute = publicRoutes.contains(currentLocation);
 
-      return authState?.when(
-        initial: () => null, // Permitir navegación inicial
-        loading: () => null, // No redirigir mientras carga
+      return authState.when(
+        initial: () => RouteNames.splash,
+        loading: () => RouteNames.splash,
+
         authenticated: (_) {
-          // Usuario autenticado intentando acceder a rutas públicas → HOME
-          if (isPublicRoute && currentLocation != RouteNames.splash) {
+          if (isPublicRoute) {
             return RouteNames.home;
           }
-          return null; // Permitir acceso a rutas protegidas
+          return null;
         },
+
         unauthenticated: () {
-          // Usuario no autenticado intentando acceder a rutas protegidas → LOGIN
           if (!isPublicRoute) {
             return RouteNames.login;
           }
-          return null; // Permitir acceso a rutas públicas
+          if (currentLocation == RouteNames.splash) {
+            return RouteNames.login;
+          }
+          return null;
         },
+
         error: (_) {
-          // En caso de error, redirigir a LOGIN
           if (!isPublicRoute) {
             return RouteNames.login;
           }
@@ -54,7 +70,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
 
     routes: [
-      // ==================== AUTH ROUTES ====================
       GoRoute(
         path: RouteNames.splash,
         name: 'splash',
@@ -71,9 +86,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.register,
         name: 'register',
         builder: (context, state) {
-          // Obtener guestUserId si viene de migración
-          final guestUserId = state.uri.queryParameters['guestUserId'];
-          return RegisterScreen(guestUserId: guestUserId);
+          return RegisterScreen();
         },
       ),
 
@@ -87,7 +100,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.linkAccount,
         name: 'linkAccount',
         builder: (context, state) {
-          // Obtener parámetros del usuario guest
           final guestUserId = state.uri.queryParameters['guestUserId'] ?? '';
           final guestUserName =
               state.uri.queryParameters['guestUserName'] ?? '';
@@ -99,14 +111,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // ==================== MAIN APP ROUTES ====================
       GoRoute(
         path: RouteNames.home,
         name: 'home',
         builder: (context, state) => const HomeScreen(),
       ),
-
-      // TODO: Agregar más rutas cuando estén implementadas
     ],
 
     errorBuilder: (context, state) =>
