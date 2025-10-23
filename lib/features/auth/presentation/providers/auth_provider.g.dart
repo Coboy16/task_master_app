@@ -8,17 +8,11 @@ part of 'auth_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provider principal de autenticación usando AsyncNotifier con generación de código
-/// Este provider AHORA SOLO maneja el estado de autenticación GLOBAL.
 
 @ProviderFor(Auth)
 const authProvider = AuthProvider._();
 
-/// Provider principal de autenticación usando AsyncNotifier con generación de código
-/// Este provider AHORA SOLO maneja el estado de autenticación GLOBAL.
 final class AuthProvider extends $AsyncNotifierProvider<Auth, AuthState> {
-  /// Provider principal de autenticación usando AsyncNotifier con generación de código
-  /// Este provider AHORA SOLO maneja el estado de autenticación GLOBAL.
   const AuthProvider._()
     : super(
         from: null,
@@ -39,9 +33,6 @@ final class AuthProvider extends $AsyncNotifierProvider<Auth, AuthState> {
 }
 
 String _$authHash() => r'c1554b81c239fa86c2540c8580f2c48b31487af1';
-
-/// Provider principal de autenticación usando AsyncNotifier con generación de código
-/// Este provider AHORA SOLO maneja el estado de autenticación GLOBAL.
 
 abstract class _$Auth extends $AsyncNotifier<AuthState> {
   FutureOr<AuthState> build();

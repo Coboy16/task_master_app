@@ -3,16 +3,16 @@ import 'package:dartz/dartz.dart';
 import '/features/tasks/domain/domain.dart';
 import '/core/core.dart';
 
-class DeleteTaskUsecase {
+class ToggleTaskCompletionUsecase {
   final TaskRepository _repository;
 
-  DeleteTaskUsecase(this._repository);
+  ToggleTaskCompletionUsecase(this._repository);
 
-  Future<Either<Failure, void>> call(String taskId) async {
+  Future<Either<Failure, TaskEntitie>> call(String taskId) async {
     if (taskId.trim().isEmpty) {
       return const Left(Failure.validation(message: 'ID de tarea inválido'));
     }
 
-    return await _repository.deleteTask(taskId);
+    return await _repository.toggleTaskCompletion(taskId);
   }
 }

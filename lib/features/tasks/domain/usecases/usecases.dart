@@ -1,10 +1,9 @@
-/// Task Use Cases - Barrel File
-library;
-
 export 'get_tasks_usecase.dart';
 export 'get_task_by_id_usecase.dart';
 export 'create_task_usecase.dart';
 export 'update_task_usecase.dart';
 export 'delete_task_usecase.dart';
-export 'toggle_task_usecase.dart';
+export 'toggle_task_completion_usecase.dart';
+export 'fetch_tasks_from_api_usecase.dart';
 export 'sync_tasks_usecase.dart';
+export 'get_task_stats_usecase.dart';
