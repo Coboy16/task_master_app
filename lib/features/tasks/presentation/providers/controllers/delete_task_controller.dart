@@ -8,19 +8,20 @@ part 'delete_task_controller.g.dart';
 @riverpod
 class DeleteTaskController extends _$DeleteTaskController {
   @override
-  Future<void> build() async {} // Vuelve a void, no necesitamos devolver nada
+  Future<void> build() async {}
 
   Future<bool> deleteTask(String taskId) async {
     if (!ref.mounted) {
-      if (kDebugMode)
+      if (kDebugMode) {
         print('DeleteTaskController ya no está montado al inicio.');
+      }
       return false;
     }
 
     state = const AsyncValue.loading();
 
     final usecase = ref.read(deleteTaskUsecaseProvider);
-    final result = await usecase(taskId); // <-- AWAIT
+    final result = await usecase(taskId);
 
     if (ref.mounted) {
       result.fold(
@@ -30,14 +31,13 @@ class DeleteTaskController extends _$DeleteTaskController {
         },
         (_) {
           if (kDebugMode) print('Tarea eliminada exitosamente en controlador');
-          // Éxito, solo actualiza el estado local
           state = const AsyncValue.data(null);
         },
       );
-      return true; // Se completó montado
+      return true;
     } else {
       if (kDebugMode) print('DeleteTaskController desechado durante await.');
-      return false; // Se desechó antes de terminar
+      return false;
     }
   }
 }
