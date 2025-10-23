@@ -35,7 +35,7 @@ final class TasksProvider extends $AsyncNotifierProvider<Tasks, TaskState> {
   Tasks create() => Tasks();
 }
 
-String _$tasksHash() => r'fdf1ea4642839a1722ee83bb4b8d89d439c889a7';
+String _$tasksHash() => r'7c0e67b700516f37e7e1722d3550784dd9605465';
 
 /// Provider principal de tareas
 

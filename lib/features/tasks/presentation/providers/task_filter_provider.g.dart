@@ -41,7 +41,7 @@ final class TaskFilterProvider
   }
 }
 
-String _$taskFilterHash() => r'756dc9205ba9dc778bd0c4c0ddcaae6eedadbf02';
+String _$taskFilterHash() => r'b36200c03c4d62622d8b53fac8c3ad6ecd77b1bf';
 
 abstract class _$TaskFilter extends $Notifier<TaskFilterState> {
   TaskFilterState build();
