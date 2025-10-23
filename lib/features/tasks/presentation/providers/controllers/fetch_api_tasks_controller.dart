@@ -31,20 +31,32 @@ class FetchApiTasksController extends _$FetchApiTasksController {
     final usecase = ref.read(fetchTasksFromApiUsecaseProvider);
     final result = await usecase(userId);
 
-    return result.fold(
-      (failure) {
-        if (kDebugMode) {
-          print('Error al traer tareas de API: ${failure.message}');
-        }
-        state = AsyncValue.error(failure.message, StackTrace.current);
-        return false;
-      },
-      (tasks) {
-        if (kDebugMode) print('${tasks.length} tareas traídas desde la API');
-        ref.read(tasksProvider.notifier).loadTasks();
-        state = const AsyncValue.data(null);
-        return true;
-      },
-    );
+    if (!state.hasError && !state.isLoading) {
+      return result.fold(
+        (failure) {
+          if (kDebugMode) {
+            print('Error al traer tareas de API: ${failure.message}');
+          }
+          state = AsyncValue.error(failure.message, StackTrace.current);
+          return false;
+        },
+        (tasks) {
+          if (kDebugMode) print('${tasks.length} tareas traídas desde la API');
+
+          if (!state.hasError && !state.isLoading) {
+            ref.read(tasksProvider.notifier).loadTasks();
+            state = const AsyncValue.data(null);
+          }
+          return true;
+        },
+      );
+    } else {
+      if (kDebugMode) {
+        print(
+          'FetchApiTasksController fue desechado o entró en error antes de completar.',
+        );
+      }
+      return false;
+    }
   }
 }

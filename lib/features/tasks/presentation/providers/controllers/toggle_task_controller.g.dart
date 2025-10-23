@@ -13,7 +13,7 @@ part of 'toggle_task_controller.dart';
 const toggleTaskControllerProvider = ToggleTaskControllerProvider._();
 
 final class ToggleTaskControllerProvider
-    extends $AsyncNotifierProvider<ToggleTaskController, void> {
+    extends $AsyncNotifierProvider<ToggleTaskController, TaskEntitie?> {
   const ToggleTaskControllerProvider._()
     : super(
         from: null,
@@ -34,23 +34,23 @@ final class ToggleTaskControllerProvider
 }
 
 String _$toggleTaskControllerHash() =>
-    r'8dc7d96b404892c589bc67644586929c7fe213c1';
+    r'6a58ea629549fd01ff83f62c3d8ba0d7afc59ebb';
 
-abstract class _$ToggleTaskController extends $AsyncNotifier<void> {
-  FutureOr<void> build();
+abstract class _$ToggleTaskController extends $AsyncNotifier<TaskEntitie?> {
+  FutureOr<TaskEntitie?> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    build();
-    final ref = this.ref as $Ref<AsyncValue<void>, void>;
+    final created = build();
+    final ref = this.ref as $Ref<AsyncValue<TaskEntitie?>, TaskEntitie?>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<void>, void>,
-              AsyncValue<void>,
+              AnyNotifier<AsyncValue<TaskEntitie?>, TaskEntitie?>,
+              AsyncValue<TaskEntitie?>,
               Object?,
               Object?
             >;
-    element.handleValue(ref, null);
+    element.handleValue(ref, created);
   }
 }

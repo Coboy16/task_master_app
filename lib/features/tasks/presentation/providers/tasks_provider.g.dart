@@ -8,14 +8,11 @@ part of 'tasks_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provider principal de tareas
 
 @ProviderFor(Tasks)
 const tasksProvider = TasksProvider._();
 
-/// Provider principal de tareas
 final class TasksProvider extends $AsyncNotifierProvider<Tasks, TaskState> {
-  /// Provider principal de tareas
   const TasksProvider._()
     : super(
         from: null,
@@ -36,8 +33,6 @@ final class TasksProvider extends $AsyncNotifierProvider<Tasks, TaskState> {
 }
 
 String _$tasksHash() => r'7c0e67b700516f37e7e1722d3550784dd9605465';
-
-/// Provider principal de tareas
 
 abstract class _$Tasks extends $AsyncNotifier<TaskState> {
   FutureOr<TaskState> build();

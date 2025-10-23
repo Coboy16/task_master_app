@@ -9,7 +9,6 @@ import 'task_usecases_provider.dart';
 
 part 'tasks_provider.g.dart';
 
-/// Provider principal de tareas
 @riverpod
 class Tasks extends _$Tasks {
   @override
@@ -66,12 +65,12 @@ class Tasks extends _$Tasks {
     );
   }
 
-  /// Recargar tareas (método público)
+  /// Recargar tareas
   Future<void> loadTasks() async {
     await _loadTasks();
   }
 
-  /// Refrescar tareas (pull to refresh)
+  /// Refrescar tareas
   Future<void> refreshTasks() async {
     await _loadTasks();
   }
