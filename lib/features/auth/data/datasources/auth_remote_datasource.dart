@@ -79,7 +79,7 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
       final data = userDoc.data()!;
 
       return UserModel(
-        id: _uuid.v4(), // ID local único
+        id: _uuid.v4(),
         email: firebaseUser.email,
         name: data['name'] as String,
         isGuest: false,
@@ -92,7 +92,7 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
       if (kDebugMode) {
         print('Firebase Auth Error: ${e.code} - ${e.message}');
       }
-      throw AuthException(_getAuthErrorMessage(e.code), e.code);
+      throw AuthException(FirebaseError.getAuthErrorMessage(e.code), e.code);
     } catch (e) {
       if (kDebugMode) {
         print('Error en login: $e');
@@ -108,7 +108,7 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
     required String name,
   }) async {
     try {
-      // Registrar en Firebase Auth
+      // 1. Crear usuario en Firebase Auth
       final credential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -121,9 +121,26 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
 
       final now = DateTime.now();
 
-      // Crear modelo de usuario
-      final user = UserModel(
-        id: _uuid.v4(), // ID local único
+      // 2. Crear documento del usuario en Firestore
+      final userData = {
+        'name': name,
+        'email': email,
+        'createdAt': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+      };
+
+      await _firestore.collection('users').doc(firebaseUser.uid).set(userData);
+
+      // 3. Crear tarea de bienvenida
+      await _createWelcomeTask(firebaseUser.uid);
+
+      if (kDebugMode) {
+        print('Usuario registrado exitosamente: ${firebaseUser.uid}');
+      }
+
+      // 4. Retornar modelo de usuario
+      return UserModel(
+        id: _uuid.v4(),
         email: email,
         name: name,
         isGuest: false,
@@ -132,33 +149,47 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
         updatedAt: now.toIso8601String(),
         synced: true,
       );
-
-      // Guardar en Firestore
-      await _firestore.collection('users').doc(firebaseUser.uid).set({
-        'email': email,
-        'name': name,
-        'createdAt': Timestamp.fromDate(now),
-        'updatedAt': Timestamp.fromDate(now),
-      });
-
-      // Actualizar displayName en Firebase Auth
-      await firebaseUser.updateDisplayName(name);
-
-      if (kDebugMode) {
-        print('Usuario registrado: ${firebaseUser.uid}');
-      }
-
-      return user;
     } on firebase_auth.FirebaseAuthException catch (e) {
       if (kDebugMode) {
         print('Firebase Auth Error: ${e.code} - ${e.message}');
       }
-      throw AuthException(_getAuthErrorMessage(e.code), e.code);
+      throw AuthException(e.message ?? 'Error al crear la cuenta');
     } catch (e) {
       if (kDebugMode) {
-        print('Error en registro: $e');
+        print('Error al registrar usuario: $e');
       }
       throw AuthException('Error al registrar usuario: ${e.toString()}');
+    }
+  }
+
+  Future<void> _createWelcomeTask(String firebaseUserId) async {
+    try {
+      final now = DateTime.now();
+      final taskId = _uuid.v4();
+
+      final welcomeTask = {
+        'id': taskId,
+        'title': '¡Bienvenido a TaskMaster Pro!',
+        'description':
+            'Esta es tu primera tarea. Puedes editarla o eliminarla cuando quieras. ¡Empieza a organizar tus tareas ahora!',
+        'isCompleted': false,
+        'priority': 'media',
+        'source': 'firebase',
+        'userId': firebaseUserId,
+        'createdAt': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+        'deleted': false,
+      };
+
+      await _firestore.collection('tasks').doc(taskId).set(welcomeTask);
+
+      if (kDebugMode) {
+        print('Tarea de bienvenida creada: $taskId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error al crear tarea de bienvenida: $e');
+      }
     }
   }
 
@@ -260,27 +291,5 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
   @override
   firebase_auth.User? getCurrentFirebaseUser() {
     return _firebaseAuth.currentUser;
-  }
-
-  // Helper para mensajes de error en español
-  String _getAuthErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'No existe una cuenta con este email';
-      case 'wrong-password':
-        return 'Contraseña incorrecta';
-      case 'email-already-in-use':
-        return 'Este email ya está registrado';
-      case 'invalid-email':
-        return 'Email inválido';
-      case 'weak-password':
-        return 'La contraseña es muy débil';
-      case 'too-many-requests':
-        return 'Demasiados intentos. Intenta más tarde';
-      case 'network-request-failed':
-        return 'Error de conexión. Verifica tu internet';
-      default:
-        return 'Error de autenticación';
-    }
   }
 }

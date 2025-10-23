@@ -39,6 +39,9 @@ abstract class AuthLocalDatasource {
 
   /// Verificar si hay sesión activa
   Future<bool> hasActiveSession();
+
+  /// Obtener acceso a la base de datos
+  Future<Database> get database;
 }
 
 class AuthLocalDatasourceImpl implements AuthLocalDatasource {
@@ -53,6 +56,9 @@ class AuthLocalDatasourceImpl implements AuthLocalDatasource {
   }) : _database = database,
        _prefs = prefs,
        _uuid = uuid ?? const Uuid();
+
+  @override
+  Future<Database> get database async => await _database.database;
 
   @override
   Future<UserModel> createGuestUser(String name) async {

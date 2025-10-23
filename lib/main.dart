@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/core.dart';
+import 'features/auth/presentation/providers/providers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,16 +11,14 @@ void main() async {
   // Inicializar Firebase
   await FirebaseInitializer.initialize();
 
-  // Inicializar SQLite Database
-  await AppDatabase.instance.database;
-
   // Inicializar SharedPreferences
-  final prefs = await SharedPreferences.getInstance();
+  final sharedPreferences = await SharedPreferences.getInstance();
 
   runApp(
     ProviderScope(
       overrides: [
-        // TODO: Agregar overrides de providers cuando estén listos
+        // Proveer SharedPreferences a toda la app
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
       ],
       child: const MyApp(),
     ),
@@ -39,7 +38,6 @@ class MyApp extends ConsumerWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF007AFF)),
         useMaterial3: true,
-        fontFamily: '-apple-system',
       ),
       routerConfig: router,
     );

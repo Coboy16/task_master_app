@@ -11,15 +11,46 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: RouteNames.splash,
     debugLogDiagnostics: true,
 
+    // Redirect automático basado en estado de autenticación
     redirect: (context, state) {
-      // TODO: Implementar lógica de redirect cuando tengamos el authProvider
-      // final isAuthenticated = authState.maybeWhen(
-      //   authenticated: (_) => true,
-      //   orElse: () => false,
-      // );
+      final authState = ref.read(authProvider).value;
 
-      // Por ahora, no hacemos redirect
-      return null;
+      // Rutas públicas (permitidas sin autenticación)
+      final publicRoutes = [
+        RouteNames.splash,
+        RouteNames.login,
+        RouteNames.register,
+        RouteNames.noAccount,
+      ];
+
+      final currentLocation = state.matchedLocation;
+      final isPublicRoute = publicRoutes.contains(currentLocation);
+
+      return authState?.when(
+        initial: () => null, // Permitir navegación inicial
+        loading: () => null, // No redirigir mientras carga
+        authenticated: (_) {
+          // Usuario autenticado intentando acceder a rutas públicas → HOME
+          if (isPublicRoute && currentLocation != RouteNames.splash) {
+            return RouteNames.home;
+          }
+          return null; // Permitir acceso a rutas protegidas
+        },
+        unauthenticated: () {
+          // Usuario no autenticado intentando acceder a rutas protegidas → LOGIN
+          if (!isPublicRoute) {
+            return RouteNames.login;
+          }
+          return null; // Permitir acceso a rutas públicas
+        },
+        error: (_) {
+          // En caso de error, redirigir a LOGIN
+          if (!isPublicRoute) {
+            return RouteNames.login;
+          }
+          return null;
+        },
+      );
     },
 
     routes: [
@@ -51,6 +82,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'noAccount',
         builder: (context, state) => const NoAccountScreen(),
       ),
+
+      GoRoute(
+        path: RouteNames.linkAccount,
+        name: 'linkAccount',
+        builder: (context, state) {
+          // Obtener parámetros del usuario guest
+          final guestUserId = state.uri.queryParameters['guestUserId'] ?? '';
+          final guestUserName =
+              state.uri.queryParameters['guestUserName'] ?? '';
+
+          return LinkAccountScreen(
+            guestUserId: guestUserId,
+            guestUserName: guestUserName,
+          );
+        },
+      ),
+
+      // ==================== MAIN APP ROUTES ====================
+      GoRoute(
+        path: RouteNames.home,
+        name: 'home',
+        builder: (context, state) => const HomeScreen(),
+      ),
+
+      // TODO: Agregar más rutas cuando estén implementadas
     ],
 
     errorBuilder: (context, state) =>

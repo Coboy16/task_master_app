@@ -6,6 +6,7 @@ class RouteNames {
   static const String login = '/login';
   static const String register = '/register';
   static const String noAccount = '/no-account';
+  static const String linkAccount = '/link-account';
 
   // Main app routes
   static const String home = '/home';

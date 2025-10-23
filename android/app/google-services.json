@@ -12,7 +12,20 @@
           "package_name": "com.coboy.task_master"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "886229230705-uf7td8tu2mc04r1mgk387utemia90nb0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.coboy.task_master",
+            "certificate_hash": "ae8a2ccb315e9a9aec407d407324907d906a9fc6"
+          }
+        },
+        {
+          "client_id": "886229230705-6a94cij928q48a6tf2vr4ie81vjs14vv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyA9-V3yZ0j3_ilijZx1sWf7mUNnQSzB1nE"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "886229230705-6a94cij928q48a6tf2vr4ie81vjs14vv.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "886229230705-9r00dqnakul2ppuldrghtvjs67al64ga.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.coboy.taskMaster"
+              }
+            }
+          ]
         }
       }
     }

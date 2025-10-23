@@ -7,16 +7,21 @@ import 'package:go_router/go_router.dart';
 import '/core/core.dart';
 import '../providers/providers.dart';
 
-class RegisterScreen extends ConsumerStatefulWidget {
-  final String? guestUserId; // Para migración de usuario invitado (futuro)
+class LinkAccountScreen extends ConsumerStatefulWidget {
+  final String guestUserId;
+  final String guestUserName;
 
-  const RegisterScreen({super.key, this.guestUserId});
+  const LinkAccountScreen({
+    super.key,
+    required this.guestUserId,
+    required this.guestUserName,
+  });
 
   @override
-  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<LinkAccountScreen> createState() => _LinkAccountScreenState();
 }
 
-class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+class _LinkAccountScreenState extends ConsumerState<LinkAccountScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _isPasswordVisible = false;
 
@@ -28,9 +33,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         authState.when(
           initial: () {},
           loading: () {},
-          authenticated: (_) {
-            // Registro exitoso → Navegar a HOME
-            if (mounted) {
+          authenticated: (user) {
+            // Migración exitosa → Navegar a HOME
+            if (mounted && !user.isGuest) {
+              // Mostrar mensaje de éxito
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('¡Cuenta vinculada exitosamente!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
               context.go(RouteNames.home);
             }
           },
@@ -53,7 +65,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         authState?.maybeWhen(loading: () => true, orElse: () => false) ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Crear cuenta'), centerTitle: true),
+      appBar: AppBar(title: const Text('Vincular cuenta'), centerTitle: true),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -64,46 +76,73 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               children: [
                 const SizedBox(height: 32),
 
+                // Ícono
+                Icon(
+                  Icons.cloud_upload_outlined,
+                  size: 80,
+                  color: Theme.of(context).primaryColor,
+                ),
+                const SizedBox(height: 24),
+
                 // Título
                 Text(
-                  'Crea tu cuenta',
+                  'Vincula tu cuenta',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
+
+                // Descripción
                 Text(
-                  'Completa los datos para comenzar',
+                  'Crea una cuenta en la nube para sincronizar tus tareas y acceder desde cualquier dispositivo.',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 32),
 
-                // Campo Nombre
-                FormBuilderTextField(
-                  name: 'name',
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre completo',
-                    hintText: 'Juan Pérez',
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: OutlineInputBorder(),
+                // Info del usuario actual
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
                   ),
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(
-                      errorText: 'El nombre es requerido',
-                    ),
-                    FormBuilderValidators.minLength(
-                      2,
-                      errorText: 'El nombre debe tener al menos 2 caracteres',
-                    ),
-                  ]),
+                  child: Row(
+                    children: [
+                      Icon(Icons.person, color: Colors.orange.shade700),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Usuario actual',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade900,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.guestUserName,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.orange.shade900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 32),
 
                 // Campo Email
                 FormBuilderTextField(
@@ -159,13 +198,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           'La contraseña debe tener al menos 6 caracteres',
                     ),
                   ]),
-                  onSubmitted: (_) => _handleRegister(),
+                  onSubmitted: (_) => _handleLinkAccount(),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                // Botón Crear cuenta
+                // Botón Vincular cuenta
                 ElevatedButton(
-                  onPressed: isLoading ? null : _handleRegister,
+                  onPressed: isLoading ? null : _handleLinkAccount,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -176,45 +215,54 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text(
-                          'Crear cuenta',
+                          'Vincular cuenta',
                           style: TextStyle(fontSize: 16),
                         ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-                // Divider con "O"
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'O',
-                        style: TextStyle(color: Colors.grey[600]),
+                // Info adicional
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.blue.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '¿Qué pasará?',
+                            style: TextStyle(
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Link a iniciar sesión
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () => context.go(RouteNames.login),
-                  child: const Text('¿Ya tienes cuenta? Inicia sesión'),
-                ),
-                const SizedBox(height: 8),
-
-                // Link a continuar sin cuenta
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () => context.push(RouteNames.noAccount),
-                  child: Text(
-                    'Continuar sin cuenta',
-                    style: TextStyle(color: Colors.grey[600]),
+                      const SizedBox(height: 8),
+                      Text(
+                        '• Tus tareas se subirán a la nube\n'
+                        '• Podrás acceder desde otros dispositivos\n'
+                        '• Tus datos estarán sincronizados\n'
+                        '• Los datos locales se eliminarán',
+                        style: TextStyle(
+                          color: Colors.blue.shade900,
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -225,15 +273,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  /// Manejar el registro
-  void _handleRegister() {
+  /// Manejar la vinculación de cuenta
+  void _handleLinkAccount() {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final values = _formKey.currentState!.value;
 
       ref
           .read(authProvider.notifier)
-          .registerWithEmail(
-            name: values['name'] as String,
+          .migrateGuestToAuth(
+            guestUserId: widget.guestUserId,
             email: values['email'] as String,
             password: values['password'] as String,
           );

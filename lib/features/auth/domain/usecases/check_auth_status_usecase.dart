@@ -8,7 +8,7 @@ class CheckAuthStatusUsecase {
 
   CheckAuthStatusUsecase(this._repository);
 
-  Future<Either<Failure, bool>> call() async {
-    return await _repository.hasActiveSession();
+  Future<Either<Failure, User?>> call() async {
+    return await _repository.getCurrentUser();
   }
 }

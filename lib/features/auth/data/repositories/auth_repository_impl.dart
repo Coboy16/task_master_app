@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 import '/features/auth/domain/domain.dart';
 import '/features/auth/data/data.dart';
@@ -148,60 +149,67 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      // 1. Obtener usuario invitado
+      // 1. Obtener el usuario invitado desde SQLite
       final guestUser = await _localDatasource.getUserById(guestUserId);
+
       if (guestUser == null) {
         return const Left(
-          Failure.cache(message: 'Usuario invitado no encontrado'),
+          Failure.validation(message: 'Usuario invitado no encontrado'),
         );
       }
 
       if (!guestUser.isGuest) {
         return const Left(
-          Failure.validation(message: 'El usuario ya está autenticado'),
+          Failure.validation(message: 'Este usuario ya está autenticado'),
         );
       }
 
-      // 2. Registrar en Firebase
-      final authUserModel = await _remoteDatasource.registerWithEmail(
+      if (kDebugMode) {
+        print('🔄 Iniciando migración de usuario invitado: ${guestUser.name}');
+      }
+
+      // 2. Crear cuenta en Firebase Auth con el nombre del usuario guest
+      final firebaseUser = await _remoteDatasource.registerWithEmail(
         email: email,
         password: password,
-        name: guestUser.name,
+        name: guestUser.name, // Usar el nombre del guest
       );
 
-      // 3. Actualizar usuario local con datos de Firebase
-      final updatedUser = guestUser.copyWith(
-        email: email,
-        isGuest: false,
-        firebaseUid: authUserModel.firebaseUid,
-        updatedAt: DateTime.now().toIso8601String(),
-        synced: true,
-      );
-
-      await _localDatasource.updateUser(updatedUser);
-
-      // 4. TODO: Sincronizar tareas del guest a Firestore
-      // Esto se implementará en el módulo de tasks
-      // await _syncGuestTasksToFirestore(guestUserId, authUserModel.firebaseUid!);
-
       if (kDebugMode) {
-        print(
-          ' Usuario migrado exitosamente: $guestUserId → ${authUserModel.firebaseUid}',
-        );
+        print('✅ Cuenta Firebase creada: ${firebaseUser.firebaseUid}');
       }
 
-      return Right(updatedUser.toEntity());
-    } on AuthException catch (e) {
-      return Left(Failure.auth(message: e.message));
-    } on ServerException catch (e) {
-      return Left(Failure.server(message: e.message));
-    } on CacheException catch (e) {
-      return Left(Failure.cache(message: e.message));
-    } catch (e) {
+      // 3. TODO: Migrar tareas locales a Firestore
+      // Esto lo implementaremos cuando tengamos el TaskRepository
+      // await _migrateLocalTasksToFirestore(guestUserId, firebaseUser.firebaseUid!);
+
+      // 4. Eliminar el usuario invitado de SQLite
+      final db = await _localDatasource.database;
+      await db.delete('users', where: 'id = ?', whereArgs: [guestUserId]);
+
       if (kDebugMode) {
-        print('Error en migración: $e');
+        print('✅ Usuario invitado eliminado de SQLite');
       }
-      return Left(Failure.unexpected(message: e.toString()));
+
+      // 5. Eliminar token de invitado de SharedPreferences
+      await _localDatasource.clearSession();
+
+      // 6. Guardar el nuevo usuario autenticado en SQLite
+      await _localDatasource.saveUser(firebaseUser);
+
+      if (kDebugMode) {
+        print('✅ Migración completada exitosamente');
+      }
+
+      // 7. Retornar el usuario autenticado
+      return Right(firebaseUser.toEntity());
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        print('❌ Firebase Auth Error en migración: ${e.code} - ${e.message}');
+      }
+
+      final errorMessage = FirebaseError.getAuthErrorMessage(e.code);
+      return Left(Failure.auth(message: errorMessage));
     }
   }
 
