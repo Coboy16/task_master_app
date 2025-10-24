@@ -23,6 +23,11 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    Future.microtask(() {
+      if (mounted) {
+        ref.read(pokemonListProvider.notifier).loadInitialPokemon();
+      }
+    });
   }
 
   @override
@@ -34,7 +39,6 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
 
   void _onScroll() {
     if (_isSearching) return;
-
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       final state = ref.read(pokemonListProvider);
@@ -49,6 +53,8 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
       _isSearching = !_isSearching;
       if (!_isSearching) {
         _searchController.clear();
+        // Cuando se cancela la búsqueda, invalidamos con cadena vacía para limpiar resultados
+        ref.invalidate(searchPokemonProvider(''));
       }
     });
   }
@@ -57,6 +63,7 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(pokemonListProvider);
     final favoritesCount = ref.watch(favoritesCountProvider);
+    final currentSearchQuery = _searchController.text;
 
     return Scaffold(
       appBar: AppBar(
@@ -74,10 +81,8 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
                   color: const Color(0xFF1a1a1a),
                 ),
                 onChanged: (value) {
-                  if (value.isNotEmpty) {
-                    // Trigger search
-                    ref.invalidate(searchPokemonProvider(value));
-                  }
+                  ref.invalidate(searchPokemonProvider(value));
+                  setState(() {});
                 },
               )
             : Text(
@@ -103,7 +108,7 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
               IconButton(
                 icon: const Icon(LucideIcons.heart, color: Color(0xFF2800C8)),
                 onPressed: () {
-                  context.push('/pokemon/favorites');
+                  context.push('/home/pokemon/favorites');
                 },
               ),
               if (favoritesCount.value != null && favoritesCount.value! > 0)
@@ -135,16 +140,22 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
           ),
         ],
       ),
-      body: _isSearching && _searchController.text.isNotEmpty
-          ? _buildSearchResults()
+      body: _isSearching
+          ? _buildSearchResults(currentSearchQuery)
           : _buildPokemonList(state),
     );
   }
 
-  Widget _buildSearchResults() {
-    final searchQuery = _searchController.text;
-    final searchResults = ref.watch(searchPokemonProvider(searchQuery));
+  Widget _buildSearchResults(String searchQuery) {
+    if (searchQuery.trim().isEmpty) {
+      return const PokemonEmptyState(
+        title: 'Busca un Pokémon',
+        message: 'Escribe el nombre de un Pokémon para empezar',
+        icon: LucideIcons.search,
+      );
+    }
 
+    final searchResults = ref.watch(searchPokemonProvider(searchQuery));
     return searchResults.when(
       data: (pokemonList) {
         if (pokemonList.isEmpty) {
@@ -155,6 +166,7 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
           );
         }
 
+        // Muestra los resultados
         return GridView.builder(
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -166,10 +178,11 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
           itemCount: pokemonList.length,
           itemBuilder: (context, index) {
             final pokemon = pokemonList[index];
+
             return PokemonCard(
               pokemon: pokemon,
               onTap: () {
-                context.push('/pokemon/detail/${pokemon.id}');
+                context.push('/home/pokemon/detail/${pokemon.id}');
               },
               onFavoriteToggle: () async {
                 await ref
@@ -182,7 +195,7 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
       },
       loading: () => const PokemonLoadingShimmer(),
       error: (error, stack) => PokemonErrorWidget(
-        message: error.toString(),
+        message: 'Error al buscar: ${error.toString()}',
         onRetry: () {
           ref.invalidate(searchPokemonProvider(searchQuery));
         },
@@ -204,10 +217,11 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
       );
     }
 
-    if (state.pokemonList.isEmpty) {
+    if (!state.isLoading && state.pokemonList.isEmpty) {
       return const PokemonEmptyState(
         title: 'No hay Pokémon',
-        message: 'La lista está vacía',
+        message: 'No se pudieron cargar los Pokémon iniciales.',
+        icon: LucideIcons.serverOff,
       );
     }
 
@@ -236,10 +250,11 @@ class _PokemonListScreenState extends ConsumerState<PokemonListScreen> {
           }
 
           final pokemon = state.pokemonList[index];
+
           return PokemonCard(
             pokemon: pokemon,
             onTap: () {
-              context.push('/pokemon/detail/${pokemon.id}');
+              context.push('/home/pokemon/detail/${pokemon.id}');
             },
             onFavoriteToggle: () async {
               await ref

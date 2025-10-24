@@ -41,7 +41,7 @@ final class PokemonListProvider
   }
 }
 
-String _$pokemonListHash() => r'b00b563e97bfdb2220e5fd8b895df199d193801b';
+String _$pokemonListHash() => r'95a9922dab12815b565eceeaf0cbd25229a2381b';
 
 abstract class _$PokemonList extends $Notifier<PokemonListState> {
   PokemonListState build();

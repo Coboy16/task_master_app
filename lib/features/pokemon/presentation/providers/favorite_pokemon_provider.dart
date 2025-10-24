@@ -10,23 +10,40 @@ part 'favorite_pokemon_provider.g.dart';
 class FavoritePokemon extends _$FavoritePokemon {
   @override
   Future<List<Pokemon>> build() async {
-    return await _loadFavorites();
-  }
-
-  Future<List<Pokemon>> _loadFavorites() async {
     final usecase = ref.read(getFavoritePokemonUsecaseProvider);
-    final authState = ref.read(authProvider).value;
-    final userId =
-        authState?.whenOrNull(authenticated: (user) => user.id) ?? '';
+    final authState = await ref.read(authProvider.future);
+
+    final userId = authState.whenOrNull(authenticated: (user) => user.id) ?? '';
+
+    if (userId.isEmpty) {
+      return [];
+    }
 
     final result = await usecase(userId);
 
     return result.fold((failure) => [], (favorites) => favorites);
   }
 
+  Future<void> _loadFavorites() async {
+    final usecase = ref.read(getFavoritePokemonUsecaseProvider);
+    final authState = await ref.read(authProvider.future);
+    final userId = authState.whenOrNull(authenticated: (user) => user.id) ?? '';
+
+    if (userId.isEmpty) {
+      state = const AsyncValue.data([]);
+      return;
+    }
+
+    final result = await usecase(userId);
+    result.fold(
+      (failure) => state = AsyncValue.error(failure, StackTrace.current),
+      (favorites) => state = AsyncValue.data(favorites),
+    );
+  }
+
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async => await _loadFavorites());
+    await _loadFavorites();
   }
 
   void removePokemon(int pokemonId) {
@@ -37,14 +54,18 @@ class FavoritePokemon extends _$FavoritePokemon {
   }
 }
 
-/// Provider para contar favoritos
 @riverpod
 Future<int> favoritesCount(Ref ref) async {
   final usecase = ref.watch(getFavoritesCountUsecaseProvider);
-  final authState = ref.watch(authProvider).value;
-  final userId = authState?.whenOrNull(authenticated: (user) => user.id) ?? '';
+
+  final authState = await ref.watch(authProvider.future);
+
+  final userId = authState.whenOrNull(authenticated: (user) => user.id) ?? '';
+
+  if (userId.isEmpty) {
+    return 0;
+  }
 
   final result = await usecase(userId);
-
   return result.fold((failure) => 0, (count) => count);
 }

@@ -9,17 +9,24 @@ part 'pokemon_detail_provider.g.dart';
 class PokemonDetail extends _$PokemonDetail {
   @override
   PokemonDetailState build(int pokemonId) {
-    _loadPokemonDetail();
     return const PokemonDetailState();
   }
 
-  Future<void> _loadPokemonDetail() async {
+  Future<void> loadPokemonDetail() async {
+    if (state.isLoading) return;
     state = state.copyWith(isLoading: true, errorMessage: null);
-
     final usecase = ref.read(getPokemonByIdUsecaseProvider);
-    final authState = ref.read(authProvider).value;
-    final userId =
-        authState?.whenOrNull(authenticated: (user) => user.id) ?? '';
+    final authState = await ref.read(authProvider.future);
+
+    final userId = authState.whenOrNull(authenticated: (user) => user.id) ?? '';
+
+    if (userId.isEmpty) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: "Usuario no encontrado",
+      );
+      return;
+    }
 
     final result = await usecase(id: pokemonId, userId: userId);
 
@@ -34,7 +41,7 @@ class PokemonDetail extends _$PokemonDetail {
   }
 
   Future<void> reload() async {
-    await _loadPokemonDetail();
+    await loadPokemonDetail();
   }
 
   void updateFavoriteStatus(bool isFavorite) {

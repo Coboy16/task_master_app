@@ -67,12 +67,31 @@ class AppDatabase {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE favorite_pokemon (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        image_url TEXT,
+        types TEXT NOT NULL,
+        height INTEGER,
+        weight INTEGER,
+        abilities TEXT,
+        stats TEXT,
+        user_id TEXT NOT NULL,
+        added_at TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      )
+    ''');
+
     // Índices para mejorar performance
     await db.execute('CREATE INDEX idx_tasks_user_id ON tasks(user_id)');
     await db.execute('CREATE INDEX idx_tasks_synced ON tasks(synced)');
     await db.execute('CREATE INDEX idx_tasks_deleted ON tasks(deleted)');
     await db.execute(
       'CREATE INDEX idx_users_firebase_uid ON users(firebase_uid)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_favorite_pokemon_user_id ON favorite_pokemon(user_id)',
     );
 
     if (kDebugMode) {

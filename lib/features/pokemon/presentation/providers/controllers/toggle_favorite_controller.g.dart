@@ -20,7 +20,7 @@ final class ToggleFavoriteControllerProvider
         argument: null,
         retry: null,
         name: r'toggleFavoriteControllerProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -34,7 +34,7 @@ final class ToggleFavoriteControllerProvider
 }
 
 String _$toggleFavoriteControllerHash() =>
-    r'b5bcdaec8671e3c6684dd043f29bed23c91f4864';
+    r'c2fef94465c845bead264d839be097919e26a3f1';
 
 abstract class _$ToggleFavoriteController extends $AsyncNotifier<void> {
   FutureOr<void> build();

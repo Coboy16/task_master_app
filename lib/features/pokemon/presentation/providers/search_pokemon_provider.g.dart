@@ -20,7 +20,7 @@ final class SearchPokemonProvider
   }) : super(
          retry: null,
          name: r'searchPokemonProvider',
-         isAutoDispose: true,
+         isAutoDispose: false,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -50,7 +50,7 @@ final class SearchPokemonProvider
   }
 }
 
-String _$searchPokemonHash() => r'77297d577b5cc6e57dea4d3303d88afadfcda871';
+String _$searchPokemonHash() => r'f1551b7e34ec77efcf7d008814927a36d9d029d8';
 
 final class SearchPokemonFamily extends $Family
     with
@@ -67,7 +67,7 @@ final class SearchPokemonFamily extends $Family
         name: r'searchPokemonProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: true,
+        isAutoDispose: false,
       );
 
   SearchPokemonProvider call(String query) =>

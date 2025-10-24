@@ -13,7 +13,7 @@ part of 'pokemon_model.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
-mixin _$PokemonModel {
+mixin _$PokemonModel implements DiagnosticableTreeMixin {
 
  int get id; String get name; String? get imageUrl; List<String> get types; int? get height; int? get weight; List<PokemonAbilityModel> get abilities; List<PokemonStatModel> get stats; bool get isFavorite;
 /// Create a copy of PokemonModel
@@ -25,6 +25,12 @@ $PokemonModelCopyWith<PokemonModel> get copyWith => _$PokemonModelCopyWithImpl<P
   /// Serializes this PokemonModel to a JSON map.
   Map<String, dynamic> toJson();
 
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'PokemonModel'))
+    ..add(DiagnosticsProperty('id', id))..add(DiagnosticsProperty('name', name))..add(DiagnosticsProperty('imageUrl', imageUrl))..add(DiagnosticsProperty('types', types))..add(DiagnosticsProperty('height', height))..add(DiagnosticsProperty('weight', weight))..add(DiagnosticsProperty('abilities', abilities))..add(DiagnosticsProperty('stats', stats))..add(DiagnosticsProperty('isFavorite', isFavorite));
+}
 
 @override
 bool operator ==(Object other) {
@@ -36,7 +42,7 @@ bool operator ==(Object other) {
 int get hashCode => Object.hash(runtimeType,id,name,imageUrl,const DeepCollectionEquality().hash(types),height,weight,const DeepCollectionEquality().hash(abilities),const DeepCollectionEquality().hash(stats),isFavorite);
 
 @override
-String toString() {
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   return 'PokemonModel(id: $id, name: $name, imageUrl: $imageUrl, types: $types, height: $height, weight: $weight, abilities: $abilities, stats: $stats, isFavorite: $isFavorite)';
 }
 
@@ -216,7 +222,7 @@ return $default(_that.id,_that.name,_that.imageUrl,_that.types,_that.height,_tha
 /// @nodoc
 @JsonSerializable()
 
-class _PokemonModel implements PokemonModel {
+class _PokemonModel with DiagnosticableTreeMixin implements PokemonModel {
   const _PokemonModel({required this.id, required this.name, this.imageUrl, required final  List<String> types, this.height, this.weight, final  List<PokemonAbilityModel> abilities = const [], final  List<PokemonStatModel> stats = const [], this.isFavorite = false}): _types = types,_abilities = abilities,_stats = stats;
   factory _PokemonModel.fromJson(Map<String, dynamic> json) => _$PokemonModelFromJson(json);
 
@@ -258,6 +264,12 @@ _$PokemonModelCopyWith<_PokemonModel> get copyWith => __$PokemonModelCopyWithImp
 Map<String, dynamic> toJson() {
   return _$PokemonModelToJson(this, );
 }
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'PokemonModel'))
+    ..add(DiagnosticsProperty('id', id))..add(DiagnosticsProperty('name', name))..add(DiagnosticsProperty('imageUrl', imageUrl))..add(DiagnosticsProperty('types', types))..add(DiagnosticsProperty('height', height))..add(DiagnosticsProperty('weight', weight))..add(DiagnosticsProperty('abilities', abilities))..add(DiagnosticsProperty('stats', stats))..add(DiagnosticsProperty('isFavorite', isFavorite));
+}
 
 @override
 bool operator ==(Object other) {
@@ -269,7 +281,7 @@ bool operator ==(Object other) {
 int get hashCode => Object.hash(runtimeType,id,name,imageUrl,const DeepCollectionEquality().hash(_types),height,weight,const DeepCollectionEquality().hash(_abilities),const DeepCollectionEquality().hash(_stats),isFavorite);
 
 @override
-String toString() {
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   return 'PokemonModel(id: $id, name: $name, imageUrl: $imageUrl, types: $types, height: $height, weight: $weight, abilities: $abilities, stats: $stats, isFavorite: $isFavorite)';
 }
 

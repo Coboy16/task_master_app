@@ -11,17 +11,26 @@ class PokemonList extends _$PokemonList {
 
   @override
   PokemonListState build() {
-    _loadInitialPokemon();
     return const PokemonListState(hasMore: true);
   }
 
-  Future<void> _loadInitialPokemon() async {
+  Future<void> loadInitialPokemon() async {
+    if (state.isLoading) return;
+
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     final usecase = ref.read(getPokemonListUsecaseProvider);
-    final authState = ref.read(authProvider).value;
-    final userId =
-        authState?.whenOrNull(authenticated: (user) => user.id) ?? '';
+    final authState = await ref.read(authProvider.future);
+
+    final userId = authState.whenOrNull(authenticated: (user) => user.id) ?? '';
+
+    if (userId.isEmpty) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Usuario no autenticado',
+      );
+      return;
+    }
 
     final result = await usecase(limit: _limit, offset: 0, userId: userId);
 
@@ -42,20 +51,26 @@ class PokemonList extends _$PokemonList {
 
   Future<void> loadMore() async {
     if (state.isLoadingMore || !state.hasMore) return;
-
     state = state.copyWith(isLoadingMore: true);
 
     final usecase = ref.read(getPokemonListUsecaseProvider);
-    final authState = ref.read(authProvider).value;
-    final userId =
-        authState?.whenOrNull(authenticated: (user) => user.id) ?? '';
+    final authState = await ref.read(authProvider.future);
+
+    final userId = authState.whenOrNull(authenticated: (user) => user.id) ?? '';
+
+    if (userId.isEmpty) {
+      state = state.copyWith(
+        isLoadingMore: false,
+        errorMessage: 'Usuario no autenticado',
+      );
+      return;
+    }
 
     final result = await usecase(
       limit: _limit,
       offset: state.currentOffset,
       userId: userId,
     );
-
     result.fold(
       (failure) {
         state = state.copyWith(
@@ -77,7 +92,7 @@ class PokemonList extends _$PokemonList {
 
   Future<void> refresh() async {
     state = const PokemonListState(hasMore: true);
-    await _loadInitialPokemon();
+    await loadInitialPokemon();
   }
 
   void updatePokemonFavoriteStatus(int pokemonId, bool isFavorite) {
@@ -87,7 +102,6 @@ class PokemonList extends _$PokemonList {
       }
       return pokemon;
     }).toList();
-
     state = state.copyWith(pokemonList: updatedList);
   }
 }

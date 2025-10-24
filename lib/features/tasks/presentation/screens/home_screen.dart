@@ -60,8 +60,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         screen: PokemonListScreen(),
         // screen: const ProfileScreen(),
         item: ItemConfig(
-          icon: const Icon(LucideIcons.user),
-          title: "Perfil",
+          icon: const Icon(LucideIcons.bug),
+          title: "PokéDex",
           textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           activeForegroundColor: const Color(0xFF2800C8),
           inactiveForegroundColor: const Color(0xFF9ca3af),

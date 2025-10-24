@@ -33,7 +33,7 @@ final class FavoritePokemonProvider
   FavoritePokemon create() => FavoritePokemon();
 }
 
-String _$favoritePokemonHash() => r'11595f2ea00f26bf522009c59e0448796d954fc7';
+String _$favoritePokemonHash() => r'06e66f2bdec44b3ba67ac60c3a8715deee4d1d7b';
 
 abstract class _$FavoritePokemon extends $AsyncNotifier<List<Pokemon>> {
   FutureOr<List<Pokemon>> build();
@@ -54,17 +54,12 @@ abstract class _$FavoritePokemon extends $AsyncNotifier<List<Pokemon>> {
   }
 }
 
-/// Provider para contar favoritos
-
 @ProviderFor(favoritesCount)
 const favoritesCountProvider = FavoritesCountProvider._();
-
-/// Provider para contar favoritos
 
 final class FavoritesCountProvider
     extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
     with $FutureModifier<int>, $FutureProvider<int> {
-  /// Provider para contar favoritos
   const FavoritesCountProvider._()
     : super(
         from: null,
@@ -90,4 +85,4 @@ final class FavoritesCountProvider
   }
 }
 
-String _$favoritesCountHash() => r'11baa90f096ba0aa511c4f88bac80bc9d99bed78';
+String _$favoritesCountHash() => r'865f3f3ec57ef668b7bd6f92b10d32c8f3f1beb0';

@@ -6,7 +6,7 @@ import '/features/pokemon/presentation/providers/providers.dart';
 
 part 'search_pokemon_provider.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class SearchPokemon extends _$SearchPokemon {
   @override
   Future<List<Pokemon>> build(String query) async {
@@ -18,9 +18,13 @@ class SearchPokemon extends _$SearchPokemon {
 
   Future<List<Pokemon>> _searchPokemon(String query) async {
     final usecase = ref.read(searchPokemonUsecaseProvider);
-    final authState = ref.read(authProvider).value;
-    final userId =
-        authState?.whenOrNull(authenticated: (user) => user.id) ?? '';
+    final authState = await ref.read(authProvider.future);
+
+    final userId = authState.whenOrNull(authenticated: (user) => user.id) ?? '';
+
+    if (userId.isEmpty) {
+      return [];
+    }
 
     final result = await usecase(query: query, userId: userId);
 

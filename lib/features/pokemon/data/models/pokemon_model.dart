@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '/features/pokemon/data/data.dart';
 import '/features/pokemon/domain/domain.dart';
@@ -23,7 +24,6 @@ abstract class PokemonModel with _$PokemonModel {
   factory PokemonModel.fromJson(Map<String, dynamic> json) =>
       _$PokemonModelFromJson(json);
 
-  // Parsear desde GraphQL API
   factory PokemonModel.fromGraphQL(Map<String, dynamic> json) {
     final types =
         (json['pokemon_v2_pokemontypes'] as List?)
@@ -31,33 +31,59 @@ abstract class PokemonModel with _$PokemonModel {
             .where((t) => t.isNotEmpty)
             .toList() ??
         [];
-
     final abilities =
         (json['pokemon_v2_pokemonabilities'] as List?)
             ?.map((a) => PokemonAbilityModel.fromGraphQL(a))
             .toList() ??
         [];
-
     final stats =
         (json['pokemon_v2_pokemonstats'] as List?)
             ?.map((s) => PokemonStatModel.fromGraphQL(s))
             .toList() ??
         [];
 
-    // Obtener imagen del sprite oficial
-    final sprites = json['pokemon_v2_pokemonsprites'] as List?;
     String? imageUrl;
-    if (sprites != null && sprites.isNotEmpty) {
-      final spritesData = sprites[0]['sprites'];
-      if (spritesData is String) {
-        try {
-          final spritesJson = jsonDecode(spritesData);
-          imageUrl =
-              spritesJson['other']?['official-artwork']?['front_default'] ??
-              spritesJson['front_default'];
-        } catch (e) {
-          imageUrl = null;
+    try {
+      final spritesList = json['pokemon_v2_pokemonsprites'] as List?;
+      if (spritesList != null && spritesList.isNotEmpty) {
+        final spritesData = spritesList[0];
+        if (spritesData is Map<String, dynamic>) {
+          final spritesMap = spritesData['sprites'];
+
+          if (spritesMap is Map<String, dynamic>) {
+            imageUrl =
+                spritesMap['other']?['official-artwork']?['front_default'] ??
+                spritesMap['other']?['dream_world']?['front_default'] ??
+                spritesMap['other']?['home']?['front_default'] ??
+                spritesMap['front_default'];
+          } else if (spritesMap is String && spritesMap.isNotEmpty) {
+            // if (kDebugMode) {
+            //   print(
+            //     'Pokemon ID ${json['id']} (${json['name']}): sprites field was a String, decoding...',
+            //   );
+            // }
+            final spritesJson = jsonDecode(spritesMap);
+            imageUrl =
+                spritesJson['other']?['official-artwork']?['front_default'] ??
+                spritesJson['other']?['dream_world']?['front_default'] ??
+                spritesJson['other']?['home']?['front_default'] ??
+                spritesJson['front_default'];
+          }
         }
+      }
+
+      if (kDebugMode) {
+        print(
+          'Pokemon ID ${json['id']} (${json['name']}): Final imageUrl: $imageUrl',
+        );
+      }
+    } catch (e, s) {
+      imageUrl = null;
+      if (kDebugMode) {
+        print(
+          'Pokemon ID ${json['id']} (${json['name']}): Error processing sprites - $e',
+        );
+        print(s);
       }
     }
 
@@ -73,7 +99,6 @@ abstract class PokemonModel with _$PokemonModel {
     );
   }
 
-  // Parsear desde SQLite
   factory PokemonModel.fromSQLite(Map<String, dynamic> map) {
     final typesString = map['types'] as String;
     final types = typesString.split(',').where((t) => t.isNotEmpty).toList();

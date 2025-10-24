@@ -8,23 +8,45 @@ import '/features/pokemon/data/data.dart';
 import '/features/pokemon/presentation/providers/providers.dart';
 import '/features/pokemon/presentation/widgets/widgets.dart';
 
-class PokemonDetailScreen extends ConsumerWidget {
+import '/features/pokemon/domain/domain.dart';
+
+class PokemonDetailScreen extends ConsumerStatefulWidget {
   final int pokemonId;
 
   const PokemonDetailScreen({super.key, required this.pokemonId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(pokemonDetailProvider(pokemonId));
+  ConsumerState<PokemonDetailScreen> createState() =>
+      _PokemonDetailScreenState();
+}
+
+class _PokemonDetailScreenState extends ConsumerState<PokemonDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) {
+        ref
+            .read(pokemonDetailProvider(widget.pokemonId).notifier)
+            .loadPokemonDetail();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(pokemonDetailProvider(widget.pokemonId));
 
     return Scaffold(
-      body: state.isLoading
+      body: state.isLoading && state.pokemon == null
           ? const Center(child: CircularProgressIndicator())
           : state.errorMessage != null
           ? PokemonErrorWidget(
               message: state.errorMessage!,
               onRetry: () {
-                ref.read(pokemonDetailProvider(pokemonId).notifier).reload();
+                ref
+                    .read(pokemonDetailProvider(widget.pokemonId).notifier)
+                    .reload();
               },
             )
           : state.pokemon != null
@@ -33,14 +55,12 @@ class PokemonDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetail(BuildContext context, WidgetRef ref, pokemon) {
+  Widget _buildDetail(BuildContext context, WidgetRef ref, Pokemon pokemon) {
     final primaryType = pokemon.types.isNotEmpty
         ? PokemonType.fromString(pokemon.types.first)
         : PokemonType.normal;
-
     return CustomScrollView(
       slivers: [
-        // App Bar con imagen
         SliverAppBar(
           expandedHeight: 300,
           pinned: true,
@@ -60,7 +80,7 @@ class PokemonDetailScreen extends ConsumerWidget {
                     .read(toggleFavoriteControllerProvider.notifier)
                     .toggle(pokemon);
                 ref
-                    .read(pokemonDetailProvider(pokemonId).notifier)
+                    .read(pokemonDetailProvider(widget.pokemonId).notifier)
                     .updateFavoriteStatus(newStatus);
               },
             ),
@@ -79,7 +99,7 @@ class PokemonDetailScreen extends ConsumerWidget {
               ),
               child: Center(
                 child: Hero(
-                  tag: 'pokemon-$pokemonId',
+                  tag: 'pokemon-${widget.pokemonId}',
                   child: pokemon.imageUrl != null
                       ? CachedNetworkImage(
                           imageUrl: pokemon.imageUrl!,
@@ -116,6 +136,7 @@ class PokemonDetailScreen extends ConsumerWidget {
                   Row(
                     children: [
                       Text(
+                        // AHORA ESTA LÍNEA FUNCIONARÁ
                         pokemon.formattedId,
                         style: GoogleFonts.inter(
                           fontSize: 16,

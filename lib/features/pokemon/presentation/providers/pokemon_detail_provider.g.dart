@@ -58,7 +58,7 @@ final class PokemonDetailProvider
   }
 }
 
-String _$pokemonDetailHash() => r'84de2668ad8189823e23f84ffacb0f6565e75eba';
+String _$pokemonDetailHash() => r'3317be10e99da5888dd607b588902c0f67f401cd';
 
 final class PokemonDetailFamily extends $Family
     with

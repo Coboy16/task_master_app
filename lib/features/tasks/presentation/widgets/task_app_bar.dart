@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '/core/core.dart';
 import '/features/auth/presentation/providers/providers.dart';
 
 class TaskAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -48,16 +50,20 @@ class TaskAppBar extends ConsumerWidget implements PreferredSizeWidget {
               padding: const EdgeInsets.only(left: 16),
               child: GestureDetector(
                 onTap: () {
-                  // Navegar al perfil o mostrar menú
+                  // 👇 Navegar al perfil
+                  context.push(RouteNames.profile);
                 },
-                child: CircleAvatar(
-                  backgroundColor: const Color(0xFF2800C8),
-                  child: Text(
-                    userInitial,
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                child: Hero(
+                  tag: 'profile-avatar',
+                  child: CircleAvatar(
+                    backgroundColor: const Color(0xFF2800C8),
+                    child: Text(
+                      userInitial,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),

@@ -49,22 +49,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             return null;
           }
 
-          // Si está autenticado (no invitado) y intenta ir a linkAccount, redirigir a home
           if (!user.isGuest && currentLocation == RouteNames.linkAccount) {
             return RouteNames.home;
           }
 
-          // Si está autenticado y en una ruta pública (que no sea splash)
           if (isPublicRoute && currentLocation != RouteNames.splash) {
             return RouteNames.home;
           }
 
-          // Si está autenticado y en splash, llévalo a home
           if (currentLocation == RouteNames.splash) {
             return RouteNames.home;
           }
 
-          // En cualquier otro caso (ya en home o subrutas), déjalo estar
           return null;
         },
 
@@ -73,22 +69,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             return RouteNames.login;
           }
 
-          // Si no está autenticado y está en una ruta protegida
           if (!isPublicRoute && currentLocation != RouteNames.splash) {
             return RouteNames.login;
           }
 
-          // Si no está autenticado y está en splash (después de cargar), llévalo a login
           if (currentLocation == RouteNames.splash) {
             return RouteNames.login;
           }
 
-          // En cualquier otro caso (ya en login, register, etc.), déjalo estar
           return null;
         },
 
         error: (_) {
-          // Si hay error, tratar como no autenticado
           if (!isPublicRoute && currentLocation != RouteNames.splash) {
             return RouteNames.login;
           }
@@ -141,6 +133,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HomeScreen(),
         routes: [
           GoRoute(
+            path: 'profile',
+            name: 'profile',
+            pageBuilder: (context, state) {
+              return CustomTransitionPage(
+                key: state.pageKey,
+                child: const ProfileScreen(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                      return SlideTransition(
+                        position:
+                            Tween<Offset>(
+                              begin: const Offset(1.0, 0.0),
+                              end: Offset.zero,
+                            ).animate(
+                              CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeInOut,
+                              ),
+                            ),
+                        child: child,
+                      );
+                    },
+              );
+            },
+          ),
+
+          GoRoute(
             path: 'new',
             name: 'newTask',
             builder: (context, state) => const TaskFormScreen(),
@@ -161,6 +180,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final taskId = state.pathParameters['taskId'] ?? '';
               return TaskDetailScreen(taskId: taskId);
+            },
+          ),
+
+          GoRoute(
+            path: 'pokemon/favorites',
+            name: 'pokemonFavorites',
+            builder: (context, state) => const FavoritePokemonScreen(),
+          ),
+          GoRoute(
+            path: 'pokemon/detail/:id',
+            name: 'pokemonDetail',
+            builder: (context, state) {
+              final pokemonId =
+                  int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
+              return PokemonDetailScreen(pokemonId: pokemonId);
             },
           ),
         ],

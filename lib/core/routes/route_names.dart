@@ -13,5 +13,5 @@ class RouteNames {
   static const String taskDetail = '/task/:id';
   static const String taskForm = '/task-form';
   static const String countries = '/countries';
-  static const String profile = '/profile';
+  static const String profile = '/home/profile';
 }
