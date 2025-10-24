@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:toastification/toastification.dart';
 
 import '/core/core.dart';
+import '/shared/shared.dart';
 import '/features/auth/presentation/providers/providers.dart';
 import '/features/tasks/presentation/providers/providers.dart';
 import '/features/tasks/presentation/widgets/widgets.dart';
@@ -21,63 +23,162 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
     await ref.read(tasksProvider.notifier).refreshTasks();
   }
 
-  Future<void> _toggleTask(String taskId) async {
+  Future<void> _toggleTask(String taskId, bool wasCompleted) async {
     final success = await ref
         .read(toggleTaskControllerProvider.notifier)
         .toggleTaskCompletion(taskId);
     if (success && mounted) {
       await ref.read(tasksProvider.notifier).refreshTasks();
+
+      if (!wasCompleted) {
+        toastification.show(
+          context: context,
+          type: ToastificationType.success,
+          style: ToastificationStyle.fillColored,
+          title: Text(
+            'Tarea completada',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+          description: Text(
+            'La tarea se ha marcado como completada',
+            style: GoogleFonts.inter(),
+          ),
+          alignment: Alignment.topRight,
+          autoCloseDuration: const Duration(seconds: 3),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: lowModeShadow,
+          showProgressBar: true,
+          closeButtonShowType: CloseButtonShowType.onHover,
+          closeOnClick: false,
+          pauseOnHover: true,
+          dragToClose: true,
+        );
+      }
     }
   }
 
-  void _showDeleteConfirmation(String taskId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Eliminar Tarea',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF1a1a1a),
-          ),
-        ),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar esta tarea?',
-          style: GoogleFonts.inter(color: const Color(0xFF6b7280)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancelar',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF6b7280),
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final success = await ref
-                  .read(deleteTaskControllerProvider.notifier)
-                  .deleteTask(taskId);
-              if (success && mounted) {
-                ref.read(tasksProvider.notifier).refreshTasks();
-              }
-            },
-            child: Text(
-              'Eliminar',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFFef4444),
-              ),
-            ),
-          ),
-        ],
-      ),
+  void _showDeleteConfirmation(String taskId) async {
+    final result = await ConfirmationModal.show(
+      context,
+      title: 'Eliminar Tarea',
+      message: '¿Estás seguro de que deseas eliminar esta tarea?',
+      cancelText: 'Cancelar',
+      confirmText: 'Eliminar',
+      confirmColor: const Color(0xFFef4444),
     );
+
+    if (result == true && mounted) {
+      final success = await ref
+          .read(deleteTaskControllerProvider.notifier)
+          .deleteTask(taskId);
+      if (success && mounted) {
+        ref.read(tasksProvider.notifier).refreshTasks();
+      }
+    }
+  }
+
+  void _showImportConfirmation() async {
+    final result = await ConfirmationModal.show(
+      context,
+      title: 'Importar Tareas',
+      message:
+          '¿Deseas importar tareas desde la API?\nEsto agregará nuevas tareas a tu lista.',
+      cancelText: 'Cancelar',
+      confirmText: 'Importar',
+    );
+
+    if (result == true && mounted) {
+      _importTasksFromApi();
+    }
+  }
+
+  Future<void> _importTasksFromApi() async {
+    toastification.show(
+      context: context,
+      type: ToastificationType.info,
+      style: ToastificationStyle.fillColored,
+      title: Text(
+        'Importando tareas...',
+        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+      ),
+      description: Text(
+        'Obteniendo tareas desde la API',
+        style: GoogleFonts.inter(),
+      ),
+      alignment: Alignment.topRight,
+      autoCloseDuration: const Duration(seconds: 30),
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: lowModeShadow,
+      showProgressBar: true,
+      closeButtonShowType: CloseButtonShowType.onHover,
+      closeOnClick: false,
+      pauseOnHover: true,
+      dragToClose: true,
+    );
+
+    try {
+      final success = await ref
+          .read(fetchApiTasksControllerProvider.notifier)
+          .fetchTasksFromApi();
+
+      if (!mounted) return;
+
+      toastification.dismissAll();
+
+      if (success) {
+        await ref.read(tasksProvider.notifier).refreshTasks();
+        if (mounted) {
+          toastification.show(
+            context: context,
+            type: ToastificationType.success,
+            style: ToastificationStyle.fillColored,
+            title: Text(
+              'Tareas importadas',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
+            description: Text(
+              'Las tareas se han importado correctamente',
+              style: GoogleFonts.inter(),
+            ),
+            alignment: Alignment.topRight,
+            autoCloseDuration: const Duration(seconds: 3),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: lowModeShadow,
+            showProgressBar: true,
+            closeButtonShowType: CloseButtonShowType.onHover,
+            closeOnClick: false,
+            pauseOnHover: true,
+            dragToClose: true,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        toastification.dismissAll();
+        toastification.show(
+          context: context,
+          type: ToastificationType.error,
+          style: ToastificationStyle.fillColored,
+          title: Text(
+            'Error al importar',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+          description: Text(
+            'No se pudieron importar las tareas: $e',
+            style: GoogleFonts.inter(),
+          ),
+          alignment: Alignment.topRight,
+          autoCloseDuration: const Duration(seconds: 5),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: lowModeShadow,
+          showProgressBar: true,
+          closeButtonShowType: CloseButtonShowType.onHover,
+          closeOnClick: false,
+          pauseOnHover: true,
+          dragToClose: true,
+        );
+      }
+    }
   }
 
   @override
@@ -106,22 +207,28 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
               tooltip: 'Sincronizar',
               onPressed: () {
                 ref.read(syncTasksControllerProvider.notifier).syncTasks();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Sincronizando...',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    backgroundColor: const Color(0xFF1a1a1a),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    margin: const EdgeInsets.all(16),
+
+                toastification.show(
+                  context: context,
+                  type: ToastificationType.info,
+                  style: ToastificationStyle.fillColored,
+                  title: Text(
+                    'Sincronizando...',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                   ),
+                  description: Text(
+                    'Actualizando tus tareas',
+                    style: GoogleFonts.inter(),
+                  ),
+                  alignment: Alignment.topRight,
+                  autoCloseDuration: const Duration(seconds: 3),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: lowModeShadow,
+                  showProgressBar: true,
+                  closeButtonShowType: CloseButtonShowType.onHover,
+                  closeOnClick: false,
+                  pauseOnHover: true,
+                  dragToClose: true,
                 );
               },
             ),
@@ -132,103 +239,7 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
               size: 20,
             ),
             tooltip: 'Importar de API',
-            onPressed: () async {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        'Obteniendo tareas...',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  backgroundColor: const Color(0xFF1a1a1a),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  margin: const EdgeInsets.all(16),
-                  duration: const Duration(seconds: 30),
-                ),
-              );
-
-              try {
-                final success = await ref
-                    .read(fetchApiTasksControllerProvider.notifier)
-                    .fetchTasksFromApi();
-                if (!mounted) return;
-
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-                if (success) {
-                  await ref.read(tasksProvider.notifier).refreshTasks();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            const Icon(
-                              LucideIcons.circleCheck,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Tareas importadas',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        backgroundColor: const Color(0xFF10b981),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        margin: const EdgeInsets.all(16),
-                      ),
-                    );
-                  }
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Error: $e',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      backgroundColor: const Color(0xFFef4444),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      margin: const EdgeInsets.all(16),
-                    ),
-                  );
-                }
-              }
-            },
+            onPressed: _showImportConfirmation,
           ),
           const SizedBox(width: 8),
         ],
@@ -326,7 +337,8 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                           onTap: () {
                             context.push('${RouteNames.home}/${task.id}');
                           },
-                          onToggle: () => _toggleTask(task.id),
+                          onToggle: () =>
+                              _toggleTask(task.id, task.isCompleted),
                           onEdit: () {
                             context.push(
                               '${RouteNames.home}/edit',

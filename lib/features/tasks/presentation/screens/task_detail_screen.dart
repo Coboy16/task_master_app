@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:toastification/toastification.dart';
 
 import '/core/core.dart';
+import '/shared/shared.dart';
 import '/features/tasks/data/data.dart';
 import '/features/tasks/domain/domain.dart';
 import '/features/tasks/presentation/providers/providers.dart';
@@ -19,55 +21,25 @@ class TaskDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
-  void _showDeleteConfirmation(String taskId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Eliminar Tarea',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF1a1a1a),
-          ),
-        ),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar esta tarea?',
-          style: GoogleFonts.inter(color: const Color(0xFF6b7280)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancelar',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF6b7280),
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final success = await ref
-                  .read(deleteTaskControllerProvider.notifier)
-                  .deleteTask(taskId);
-              if (success && mounted) {
-                ref.read(tasksProvider.notifier).refreshTasks();
-                context.pop();
-              }
-            },
-            child: Text(
-              'Eliminar',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFFef4444),
-              ),
-            ),
-          ),
-        ],
-      ),
+  void _showDeleteConfirmation(String taskId) async {
+    final result = await ConfirmationModal.show(
+      context,
+      title: 'Eliminar Tarea',
+      message: '¿Estás seguro de que deseas eliminar esta tarea?',
+      cancelText: 'Cancelar',
+      confirmText: 'Eliminar',
+      confirmColor: const Color(0xFFef4444),
     );
+
+    if (result == true && mounted) {
+      final success = await ref
+          .read(deleteTaskControllerProvider.notifier)
+          .deleteTask(taskId);
+      if (success && mounted) {
+        ref.read(tasksProvider.notifier).refreshTasks();
+        context.pop();
+      }
+    }
   }
 
   Future<void> _toggleStatus(TaskEntitie task) async {
@@ -78,6 +50,32 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     if (success && mounted) {
       await ref.read(tasksProvider.notifier).refreshTasks();
       ref.invalidate(taskDetailProvider(widget.taskId));
+
+      // Solo mostrar toastification si la tarea se marcó como completada
+      if (!task.isCompleted) {
+        toastification.show(
+          context: context,
+          type: ToastificationType.success,
+          style: ToastificationStyle.fillColored,
+          title: Text(
+            'Tarea completada',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+          description: Text(
+            'La tarea se ha marcado como completada',
+            style: GoogleFonts.inter(),
+          ),
+          alignment: Alignment.topRight,
+          autoCloseDuration: const Duration(seconds: 3),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: lowModeShadow,
+          showProgressBar: true,
+          closeButtonShowType: CloseButtonShowType.onHover,
+          closeOnClick: false,
+          pauseOnHover: true,
+          dragToClose: true,
+        );
+      }
     }
   }
 
@@ -239,40 +237,31 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                     height: 1.2,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-                // Chips info
+                // Chips de información
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _InfoChip(
-                      icon: LucideIcons.flag,
-                      label: task.priorityText,
-                      color: Color(task.priorityColor),
-                    ),
-                    _InfoChip(
-                      icon: task.source == TaskSource.api
-                          ? LucideIcons.cloud
-                          : task.source == TaskSource.firebase
-                          ? LucideIcons.cloudCheck
-                          : LucideIcons.smartphone,
-                      label: task.sourceText,
-                      color: const Color(0xFF6b7280),
-                    ),
-                    if (task.source != TaskSource.api)
+                    if (task.source == TaskSource.api)
                       _InfoChip(
-                        icon: task.synced
-                            ? LucideIcons.circleCheck
-                            : LucideIcons.clock,
-                        label: task.synced ? 'Sincronizado' : 'Pendiente',
-                        color: task.synced
-                            ? const Color(0xFF10b981)
-                            : const Color(0xFFf59e0b),
+                        icon: LucideIcons.cloud,
+                        label: 'API',
+                        color: const Color(0xFF3b82f6),
                       ),
+                    _InfoChip(
+                      icon: task.isCompleted
+                          ? LucideIcons.circleCheck
+                          : LucideIcons.clock,
+                      label: task.isCompleted ? 'Completada' : 'Pendiente',
+                      color: task.isCompleted
+                          ? const Color(0xFF10b981)
+                          : const Color(0xFFf59e0b),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // Descripción
                 Container(
