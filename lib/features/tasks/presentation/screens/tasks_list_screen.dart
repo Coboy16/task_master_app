@@ -5,6 +5,8 @@ import 'package:task_master/core/core.dart';
 
 import '/features/auth/presentation/providers/providers.dart';
 import '/features/tasks/presentation/providers/providers.dart';
+// Importamos los nuevos widgets
+import '/features/tasks/presentation/widgets/widgets.dart';
 
 class TasksListScreen extends ConsumerStatefulWidget {
   const TasksListScreen({super.key});
@@ -23,16 +25,17 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
     await ref.read(tasksProvider.notifier).refreshTasks();
   }
 
+  // Este método ahora será llamado por el callback de TaskItem
   Future<void> _toggleTask(String taskId) async {
     final success = await ref
         .read(toggleTaskControllerProvider.notifier)
         .toggleTaskCompletion(taskId);
-
     if (success && mounted) {
       await ref.read(tasksProvider.notifier).refreshTasks();
     }
   }
 
+  // Este método también será llamado por el callback de TaskItem
   void _showDeleteConfirmation(String taskId) {
     showDialog(
       context: context,
@@ -90,7 +93,6 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                   );
               },
             ),
-
           IconButton(
             icon: const Icon(Icons.cloud_download_outlined),
             tooltip: 'Traer de API (Demo)',
@@ -116,19 +118,16 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                     duration: Duration(seconds: 30),
                   ),
                 );
-
               try {
                 final success = await ref
                     .read(fetchApiTasksControllerProvider.notifier)
                     .fetchTasksFromApi();
-
                 if (!mounted) return;
 
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
                 if (success) {
                   await ref.read(tasksProvider.notifier).refreshTasks();
-
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -179,18 +178,26 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
       ),
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            color: Colors.grey.shade100,
-            child: const Center(child: Text('Placeholder: TaskFilterTabs')),
+          // 1. REEMPLAZAMOS LOS PLACEHOLDERS POR EL WIDGET DE STATS
+          tasksState.when(
+            data: (state) => state.maybeWhen(
+              loaded: (tasks, stats) {
+                // Mostramos la barra de stats si existen
+                if (stats != null) {
+                  return TaskStatsBar(stats: stats);
+                }
+                return const SizedBox.shrink();
+              },
+              orElse: () => const SizedBox.shrink(),
+            ),
+            loading: () => const SizedBox(
+              height: 80, // Altura similar a la barra de stats
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (_, __) => const SizedBox.shrink(),
           ),
 
-          Container(
-            padding: const EdgeInsets.all(8),
-            color: Colors.blue.shade50,
-            child: const Center(child: Text('Placeholder: TaskStatsBar')),
-          ),
-
+          // 2. EL RESTO DEL BODY SE MANTIENE IGUAL
           Expanded(
             child: tasksState.when(
               data: (state) => state.when(
@@ -244,41 +251,33 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                     );
                   }
 
+                  // 3. USAMOS EL NUEVO WIDGET TaskItem EN LUGAR DEL ListTile
                   return RefreshIndicator(
                     onRefresh: _refreshTasks,
                     child: ListView.builder(
+                      padding: const EdgeInsets.only(
+                        bottom: 80,
+                      ), // Espacio para el FAB
                       itemCount: tasks.length,
                       itemBuilder: (context, index) {
                         final task = tasks[index];
-                        return ListTile(
-                          title: Text(
-                            task.title,
-                            style: TextStyle(
-                              decoration: task.isCompleted
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                            ),
-                          ),
-                          subtitle: Text(
-                            task.description,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          leading: Checkbox(
-                            value: task.isCompleted,
-                            onChanged: (val) {
-                              _toggleTask(task.id);
-                            },
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.red,
-                            ),
-                            onPressed: () => _showDeleteConfirmation(task.id),
-                          ),
+                        // Usamos el nuevo widget y le pasamos los callbacks
+                        return TaskItem(
+                          task: task,
                           onTap: () {
                             context.push('${RouteNames.home}/${task.id}');
+                          },
+                          onToggle: () => _toggleTask(task.id),
+                          onEdit: () {
+                            // Navegamos a la pantalla de edición
+                            context.push(
+                              '${RouteNames.home}/edit',
+                              extra: task,
+                            );
+                          },
+                          onDelete: () {
+                            // Mostramos el diálogo de confirmación
+                            _showDeleteConfirmation(task.id);
                           },
                         );
                       },
