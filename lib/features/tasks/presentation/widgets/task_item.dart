@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:task_master/features/tasks/domain/domain.dart';
-
-// Asegúrate de tener este import para AsyncCallback
 import 'package:flutter/foundation.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+
+import '/features/tasks/domain/domain.dart';
 
 class TaskItem extends StatelessWidget {
   final TaskEntitie task;
@@ -21,34 +22,81 @@ class TaskItem extends StatelessWidget {
     required this.onTap,
   });
 
-  // Método para mostrar el BottomSheet (sin cambios)
   void _showTaskOptionsBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
-        return Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Editar Tarea'),
-              onTap: () {
-                Navigator.pop(context);
-                onEdit();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.delete_outline, color: Colors.red.shade700),
-              title: Text(
-                'Eliminar Tarea',
-                style: TextStyle(color: Colors.red.shade700),
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFe5e7eb),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-              onTap: () {
-                Navigator.pop(context);
-                onDelete();
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2800C8).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    LucideIcons.pencilLine,
+                    color: Color(0xFF2800C8),
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  'Editar Tarea',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1a1a1a),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  onEdit();
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFef4444).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    LucideIcons.trash2,
+                    color: Color(0xFFef4444),
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  'Eliminar Tarea',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFef4444),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDelete();
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         );
       },
     );
@@ -56,135 +104,181 @@ class TaskItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final bool isCompleted = task.isCompleted;
 
     return Dismissible(
       key: ValueKey(task.id),
-
-      // LÓGICA DE CONFIRMACIÓN ACTUALIZADA
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
-          // --- ACCIÓN: MARCAR COMO COMPLETADA ---
-          // Si ya está completada, no hagas nada
           if (task.isCompleted) return false;
-
-          // Si está pendiente, llama al toggle para completarla
           await onToggle();
-          return false; // Previene que se elimine
+          return false;
         } else if (direction == DismissDirection.endToStart) {
-          // --- ACCIÓN: MARCAR COMO PENDIENTE (INCOMPLETA) ---
-          // Si ya está pendiente, no hagas nada
           if (!task.isCompleted) return false;
-
-          // Si está completada, llama al toggle para marcarla pendiente
           await onToggle();
-          return false; // Previene que se elimine
+          return false;
         }
         return false;
       },
-
-      // FONDO DERECHA (Swipe ->)
-      // Siempre verde para "Completar"
       background: Container(
-        color: Colors.green.shade700,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF10b981),
+          borderRadius: BorderRadius.circular(12),
+        ),
         alignment: Alignment.centerLeft,
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.start,
+        child: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 10),
+            const Icon(LucideIcons.circleCheck, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
             Text(
               'Completar',
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 color: Colors.white,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
               ),
             ),
           ],
         ),
       ),
-
-      // FONDO IZQUIERDA (Swipe <-)
-      // Siempre naranja para "Marcar Pendiente"
       secondaryBackground: Container(
-        color: Colors.orange.shade700,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFf59e0b),
+          borderRadius: BorderRadius.circular(12),
+        ),
         alignment: Alignment.centerRight,
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Text(
-              'Marcar Pendiente',
-              style: TextStyle(
+              'Pendiente',
+              style: GoogleFonts.inter(
                 color: Colors.white,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
               ),
             ),
-            SizedBox(width: 10),
-            Icon(Icons.pending_actions_rounded, color: Colors.white),
+            const SizedBox(width: 8),
+            const Icon(LucideIcons.clock, color: Colors.white, size: 20),
           ],
         ),
       ),
-
-      // CONTENIDO DE LA TARJETA (Sin cambios)
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        elevation: 2,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFe5e7eb), width: 1),
+        ),
         child: ListTile(
           onTap: onTap,
-          leading: Checkbox(
-            value: isCompleted,
-            onChanged: (val) {
-              onToggle();
-            },
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
+          leading: GestureDetector(
+            onTap: () => onToggle(),
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isCompleted
+                      ? const Color(0xFF10b981)
+                      : const Color(0xFFd1d5db),
+                  width: 2,
+                ),
+                color: isCompleted
+                    ? const Color(0xFF10b981)
+                    : Colors.transparent,
+              ),
+              child: isCompleted
+                  ? const Icon(LucideIcons.check, size: 16, color: Colors.white)
+                  : null,
+            ),
           ),
           title: Text(
             task.title,
-            style: textTheme.titleMedium?.copyWith(
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
               decoration: isCompleted
                   ? TextDecoration.lineThrough
                   : TextDecoration.none,
-              color: isCompleted ? Colors.grey.shade600 : Colors.black87,
-              fontWeight: FontWeight.w600,
+              color: isCompleted
+                  ? const Color(0xFF9ca3af)
+                  : const Color(0xFF1a1a1a),
             ),
           ),
           subtitle: Padding(
-            padding: const EdgeInsets.only(top: 4.0),
+            padding: const EdgeInsets.only(top: 4),
             child: Row(
               children: [
-                Icon(Icons.flag, color: Color(task.priorityColor), size: 14),
-                const SizedBox(width: 4),
-                Text(
-                  task.priorityText,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: Color(task.priorityColor),
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Color(task.priorityColor).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    task.priorityText,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(task.priorityColor),
+                    ),
                   ),
                 ),
-                const Text('  •  '),
+                const SizedBox(width: 8),
+                Icon(
+                  LucideIcons.calendar,
+                  size: 12,
+                  color: const Color(0xFF9ca3af),
+                ),
+                const SizedBox(width: 4),
                 Text(
                   DateFormat.yMd().format(task.createdAt),
-                  style: textTheme.bodySmall,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF6b7280),
+                  ),
                 ),
               ],
             ),
           ),
           trailing: IconButton(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(
+              LucideIcons.ellipsisVertical,
+              color: Color(0xFF6b7280),
+              size: 20,
+            ),
             onPressed: () {
               if (task.isFromApi) {
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Las tareas de la API no se pueden editar o eliminar',
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Las tareas de la API no se pueden editar',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
-                      duration: Duration(seconds: 2),
                     ),
-                  );
+                    backgroundColor: const Color(0xFF1a1a1a),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    margin: const EdgeInsets.all(16),
+                  ),
+                );
                 return;
               }
               _showTaskOptionsBottomSheet(context);

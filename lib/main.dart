@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/core.dart';
@@ -8,16 +9,13 @@ import 'features/auth/presentation/providers/providers.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar Firebase
   await FirebaseInitializer.initialize();
-
-  // Inicializar SharedPreferences
   final sharedPreferences = await SharedPreferences.getInstance();
+  await initializeDateFormatting('es_PE', null);
 
   runApp(
     ProviderScope(
       overrides: [
-        // Proveer SharedPreferences a toda la app
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
       ],
       child: const MyApp(),
@@ -35,6 +33,7 @@ class MyApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'TaskMaster Pro',
       debugShowCheckedModeBanner: false,
+      locale: const Locale('es', 'PE'),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF007AFF)),
         useMaterial3: true,

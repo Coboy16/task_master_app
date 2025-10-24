@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '/features/auth/presentation/widgets/widgets.dart';
 import '/features/tasks/data/data.dart';
 import '/features/tasks/domain/domain.dart';
 import '/features/tasks/presentation/providers/providers.dart';
@@ -28,7 +31,6 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
   @override
   void initState() {
     super.initState();
-
     _titleController = TextEditingController(
       text: widget.initialTask?.title ?? '',
     );
@@ -46,21 +48,17 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isSaving = true;
-    });
+    setState(() => _isSaving = true);
 
     bool success = false;
 
     try {
       if (_isEditMode) {
         final updatedTask = widget.initialTask!.copyWith(
-          title: _titleController.text,
-          description: _descriptionController.text,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
           priority: _priority,
           updatedAt: DateTime.now(),
         );
@@ -70,35 +68,42 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
             .updateTask(updatedTask);
 
         if (success && mounted) {
-          // Refrescar la lista de tareas
           await ref.read(tasksProvider.notifier).refreshTasks();
-
-          // Invalidar el detalle para que se recargue
           ref.invalidate(taskDetailProvider(widget.initialTask!.id));
         }
       } else {
         success = await ref
             .read(createTaskControllerProvider.notifier)
             .createTask(
-              title: _titleController.text,
-              description: _descriptionController.text,
+              title: _titleController.text.trim(),
+              description: _descriptionController.text.trim(),
               priority: _priority,
             );
       }
 
       if (mounted && success) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(content: Text('Tarea guardada exitosamente')),
-          );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isEditMode ? 'Tarea actualizada' : 'Tarea creada',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: const Color(0xFF10b981),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
         context.pop();
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
+        setState(() => _isSaving = false);
       }
     }
   }
@@ -107,44 +112,109 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<void>>(createTaskControllerProvider, (prev, next) {
       if (next.hasError) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text('Error al crear: ${next.error}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+        _showErrorSnackBar('Error al crear: ${next.error}');
       }
     });
+
     ref.listen<AsyncValue<void>>(updateTaskControllerProvider, (prev, next) {
       if (next.hasError) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text('Error al actualizar: ${next.error}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+        _showErrorSnackBar('Error al actualizar: ${next.error}');
       }
     });
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditMode ? 'Editar Tarea' : 'Nueva Tarea')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(LucideIcons.arrowLeft, color: Color(0xFF1a1a1a)),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(
+          _isEditMode ? 'Editar Tarea' : 'Nueva Tarea',
+          style: GoogleFonts.inter(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1a1a1a),
+          ),
+        ),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Text(
+                'Título',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF1a1a1a),
+                ),
+              ),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Título',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: 'Nombre de la tarea',
+                  hintStyle: GoogleFonts.inter(
+                    color: const Color(0xFFd1d5db),
+                    fontSize: 15,
+                  ),
+                  prefixIcon: const Icon(
+                    LucideIcons.fileText,
+                    size: 20,
+                    color: Color(0xFF6b7280),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFe5e7eb),
+                      width: 1,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFe5e7eb),
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF2800C8),
+                      width: 2,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFef4444),
+                      width: 1,
+                    ),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFef4444),
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFfafafa),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   counterText: '',
+                ),
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  color: const Color(0xFF1a1a1a),
                 ),
                 maxLength: 50,
                 validator: (value) {
@@ -158,14 +228,67 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
                 },
                 textInputAction: TextInputAction.next,
               ),
-              const SizedBox(height: 16),
-
+              const SizedBox(height: 20),
+              Text(
+                'Descripción (Opcional)',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF1a1a1a),
+                ),
+              ),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Descripción (Opcional)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: 'Agrega más detalles...',
+                  hintStyle: GoogleFonts.inter(
+                    color: const Color(0xFFd1d5db),
+                    fontSize: 15,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFe5e7eb),
+                      width: 1,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFe5e7eb),
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF2800C8),
+                      width: 2,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFef4444),
+                      width: 1,
+                    ),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFef4444),
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFfafafa),
+                  contentPadding: const EdgeInsets.all(16),
                   counterText: '',
+                ),
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  color: const Color(0xFF1a1a1a),
                 ),
                 maxLines: 5,
                 maxLength: 250,
@@ -177,23 +300,90 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
                 },
                 textInputAction: TextInputAction.done,
               ),
-              const SizedBox(height: 16),
-
+              const SizedBox(height: 20),
+              Text(
+                'Prioridad',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF1a1a1a),
+                ),
+              ),
+              const SizedBox(height: 8),
               DropdownButtonFormField<TaskPriority>(
                 value: _priority,
-                decoration: const InputDecoration(
-                  labelText: 'Prioridad',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(
+                    LucideIcons.flag,
+                    size: 20,
+                    color: Color(0xFF6b7280),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFe5e7eb),
+                      width: 1,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFe5e7eb),
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF2800C8),
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFfafafa),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                ),
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  color: const Color(0xFF1a1a1a),
                 ),
                 items: TaskPriority.values.map((priority) {
+                  String label;
+                  Color color;
+
+                  switch (priority) {
+                    case TaskPriority.high:
+                      label = 'Alta';
+                      color = const Color(0xFFef4444);
+                      break;
+                    case TaskPriority.medium:
+                      label = 'Media';
+                      color = const Color(0xFFf59e0b);
+                      break;
+                    case TaskPriority.low:
+                      label = 'Baja';
+                      color = const Color(0xFF10b981);
+                      break;
+                  }
+
                   return DropdownMenuItem(
                     value: priority,
-                    child: Text(
-                      priority == TaskPriority.high
-                          ? 'Alta'
-                          : priority == TaskPriority.medium
-                          ? 'Media'
-                          : 'Baja',
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(label),
+                      ],
                     ),
                   );
                 }).toList(),
@@ -201,38 +391,43 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
                     ? null
                     : (value) {
                         if (value != null) {
-                          setState(() {
-                            _priority = value;
-                          });
+                          setState(() => _priority = value);
                         }
                       },
               ),
-              const SizedBox(height: 32),
-
-              ElevatedButton(
-                onPressed: _isSaving ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _isSaving
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Guardar'),
+              const SizedBox(height: 40),
+              CustomButton(
+                text: _isEditMode ? 'Actualizar Tarea' : 'Crear Tarea',
+                onPressed: _submit,
+                isLoading: _isSaving,
+                height: 52,
               ),
-
-              TextButton(
-                onPressed: _isSaving ? null : () => context.pop(),
-                child: const Text('Cancelar'),
+              const SizedBox(height: 12),
+              Center(
+                child: CustomButton(
+                  text: 'Cancelar',
+                  type: ButtonType.text,
+                  onPressed: _isSaving ? null : () => context.pop(),
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: const Color(0xFFef4444),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }

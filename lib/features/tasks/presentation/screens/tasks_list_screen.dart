@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:task_master/core/core.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '/core/core.dart';
 import '/features/auth/presentation/providers/providers.dart';
 import '/features/tasks/presentation/providers/providers.dart';
-// Importamos los nuevos widgets
 import '/features/tasks/presentation/widgets/widgets.dart';
 
 class TasksListScreen extends ConsumerStatefulWidget {
@@ -16,16 +17,10 @@ class TasksListScreen extends ConsumerStatefulWidget {
 }
 
 class _TasksListScreenState extends ConsumerState<TasksListScreen> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
   Future<void> _refreshTasks() async {
     await ref.read(tasksProvider.notifier).refreshTasks();
   }
 
-  // Este método ahora será llamado por el callback de TaskItem
   Future<void> _toggleTask(String taskId) async {
     final success = await ref
         .read(toggleTaskControllerProvider.notifier)
@@ -35,17 +30,32 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
     }
   }
 
-  // Este método también será llamado por el callback de TaskItem
   void _showDeleteConfirmation(String taskId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar Tarea'),
-        content: const Text('¿Estás seguro de que deseas eliminar esta tarea?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Eliminar Tarea',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1a1a1a),
+          ),
+        ),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar esta tarea?',
+          style: GoogleFonts.inter(color: const Color(0xFF6b7280)),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF6b7280),
+              ),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -57,8 +67,13 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                 ref.read(tasksProvider.notifier).refreshTasks();
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
+            child: Text(
+              'Eliminar',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFFef4444),
+              ),
+            ),
           ),
         ],
       ),
@@ -77,47 +92,81 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
         true;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis Tareas'),
+      backgroundColor: Colors.white,
+      appBar: TaskAppBar(
+        title: 'Mis Tareas',
         actions: [
           if (!isGuest)
             IconButton(
-              icon: const Icon(Icons.sync),
-              tooltip: 'Sincronizar tareas',
+              icon: const Icon(
+                LucideIcons.refreshCw,
+                color: Color(0xFF6b7280),
+                size: 20,
+              ),
+              tooltip: 'Sincronizar',
               onPressed: () {
                 ref.read(syncTasksControllerProvider.notifier).syncTasks();
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    const SnackBar(content: Text('Sincronizando...')),
-                  );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Sincronizando...',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    backgroundColor: const Color(0xFF1a1a1a),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    margin: const EdgeInsets.all(16),
+                  ),
+                );
               },
             ),
           IconButton(
-            icon: const Icon(Icons.cloud_download_outlined),
-            tooltip: 'Traer de API (Demo)',
+            icon: const Icon(
+              LucideIcons.cloudDownload,
+              color: Color(0xFF6b7280),
+              size: 20,
+            ),
+            tooltip: 'Importar de API',
             onPressed: () async {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  const SnackBar(
-                    content: Row(
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
                           ),
                         ),
-                        SizedBox(width: 16),
-                        Text('Obteniendo tareas de API...'),
-                      ],
-                    ),
-                    duration: Duration(seconds: 30),
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        'Obteniendo tareas...',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                );
+                  backgroundColor: const Color(0xFF1a1a1a),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  margin: const EdgeInsets.all(16),
+                  duration: const Duration(seconds: 30),
+                ),
+              );
+
               try {
                 final success = await ref
                     .read(fetchApiTasksControllerProvider.notifier)
@@ -130,59 +179,65 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                   await ref.read(tasksProvider.notifier).refreshTasks();
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Row(
                           children: [
-                            Icon(Icons.check_circle, color: Colors.white),
-                            SizedBox(width: 16),
-                            Text('✓ Tareas obtenidas exitosamente'),
+                            const Icon(
+                              LucideIcons.circleCheck,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Tareas importadas',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ],
                         ),
-                        backgroundColor: Colors.green,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                } else {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Row(
-                          children: [
-                            Icon(Icons.error, color: Colors.white),
-                            SizedBox(width: 16),
-                            Text('✗ Error al obtener tareas'),
-                          ],
+                        backgroundColor: const Color(0xFF10b981),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        backgroundColor: Colors.red,
-                        duration: Duration(seconds: 2),
+                        margin: const EdgeInsets.all(16),
                       ),
                     );
                   }
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context)
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: Colors.red,
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Error: $e',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    );
+                      backgroundColor: const Color(0xFFef4444),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      margin: const EdgeInsets.all(16),
+                    ),
+                  );
                 }
               }
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
-          // 1. REEMPLAZAMOS LOS PLACEHOLDERS POR EL WIDGET DE STATS
           tasksState.when(
             data: (state) => state.maybeWhen(
               loaded: (tasks, stats) {
-                // Mostramos la barra de stats si existen
                 if (stats != null) {
                   return TaskStatsBar(stats: stats);
                 }
@@ -191,33 +246,51 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
               orElse: () => const SizedBox.shrink(),
             ),
             loading: () => const SizedBox(
-              height: 80, // Altura similar a la barra de stats
+              height: 120,
               child: Center(child: CircularProgressIndicator()),
             ),
             error: (_, __) => const SizedBox.shrink(),
           ),
-
-          // 2. EL RESTO DEL BODY SE MANTIENE IGUAL
           Expanded(
             child: tasksState.when(
               data: (state) => state.when(
-                initial: () => const Center(child: CircularProgressIndicator()),
-                loading: () => const Center(child: CircularProgressIndicator()),
+                initial: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF2800C8)),
+                ),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF2800C8)),
+                ),
                 error: (message) => Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
+                        LucideIcons.circleAlert,
+                        color: Color(0xFFef4444),
                         size: 48,
                       ),
                       const SizedBox(height: 16),
-                      Text(message),
+                      Text(
+                        message,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF6b7280),
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _refreshTasks,
-                        child: const Text('Reintentar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2800C8),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Reintentar',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ],
                   ),
@@ -226,42 +299,28 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                   if (tasks.isEmpty) {
                     return RefreshIndicator(
                       onRefresh: _refreshTasks,
+                      color: const Color(0xFF2800C8),
                       child: ListView(
                         children: const [
                           SizedBox(height: 100),
-                          Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.inbox_outlined,
-                                  size: 64,
-                                  color: Colors.grey,
-                                ),
-                                SizedBox(height: 16),
-                                Text(
-                                  'No tienes tareas por aquí.',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                              ],
-                            ),
+                          EmptyState(
+                            message:
+                                'No tienes tareas aún.\n¡Crea tu primera tarea!',
+                            icon: LucideIcons.inbox,
                           ),
                         ],
                       ),
                     );
                   }
 
-                  // 3. USAMOS EL NUEVO WIDGET TaskItem EN LUGAR DEL ListTile
                   return RefreshIndicator(
                     onRefresh: _refreshTasks,
+                    color: const Color(0xFF2800C8),
                     child: ListView.builder(
-                      padding: const EdgeInsets.only(
-                        bottom: 80,
-                      ), // Espacio para el FAB
+                      padding: const EdgeInsets.only(top: 8, bottom: 100),
                       itemCount: tasks.length,
                       itemBuilder: (context, index) {
                         final task = tasks[index];
-                        // Usamos el nuevo widget y le pasamos los callbacks
                         return TaskItem(
                           task: task,
                           onTap: () {
@@ -269,14 +328,12 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                           },
                           onToggle: () => _toggleTask(task.id),
                           onEdit: () {
-                            // Navegamos a la pantalla de edición
                             context.push(
                               '${RouteNames.home}/edit',
                               extra: task,
                             );
                           },
                           onDelete: () {
-                            // Mostramos el diálogo de confirmación
                             _showDeleteConfirmation(task.id);
                           },
                         );
@@ -285,17 +342,18 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                   );
                 },
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, s) => Center(child: Text('Error al cargar: $e')),
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: Color(0xFF2800C8)),
+              ),
+              error: (e, s) => Center(
+                child: Text(
+                  'Error: $e',
+                  style: GoogleFonts.inter(color: const Color(0xFF6b7280)),
+                ),
+              ),
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('${RouteNames.home}/new');
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
