@@ -278,7 +278,7 @@ La aplicación utiliza Firebase Authentication para gestionar usuarios de forma 
 
 **Captura: Firebase Authentication Console**
 
-![Firebase Auth](screenshots/firebase-auth.png)
+![Firebase Auth](https://github.com/Coboy16/task_master_app/blob/main/screenshots/firebase-auth.png)
 
 **Lo que se muestra:**
 - ✅ Lista de usuarios registrados
@@ -295,7 +295,7 @@ La estructura de datos en Firestore sigue el patrón de usuarios como documentos
 
 **Captura: Colección `users` en Firestore**
 
-![Firestore Users](screenshots/firestore-users.png)
+![Firestore Users](https://github.com/Coboy16/task_master_app/blob/main/screenshots/firestore-users.png)
 
 **Estructura visible:**
 ```
@@ -321,7 +321,7 @@ Cada usuario tiene su propia subcolección de tareas, garantizando aislamiento d
 
 **Captura: Subcolección `tasks` dentro de un usuario**
 
-![Firestore Tasks](screenshots/firestore-tasks.png)
+![Firestore Tasks](https://github.com/Coboy16/task_master_app/blob/main/screenshots/firestore-tasks.png)
 
 **Estructura visible:**
 ```
@@ -353,7 +353,7 @@ Vista detallada de un documento individual de tarea mostrando todos sus campos.
 
 **Captura: Documento individual de tarea**
 
-![Task Document](screenshots/task-document.png)
+![Task Document](https://github.com/Coboy16/task_master_app/blob/main/screenshots/task-document.png)
 
 **Campos del documento:**
 
