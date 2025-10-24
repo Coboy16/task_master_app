@@ -30,16 +30,13 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
           ),
           TextButton(
             onPressed: () async {
-              // Make async
-              Navigator.pop(context); // Close dialog first
-              // Call controller and wait
+              Navigator.pop(context);
               final success = await ref
                   .read(deleteTaskControllerProvider.notifier)
                   .deleteTask(taskId);
               if (success && mounted) {
-                // If successful, ALSO refresh the main list before popping
                 ref.read(tasksProvider.notifier).refreshTasks();
-                context.pop(); // Go back to list
+                context.pop();
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -51,20 +48,18 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   }
 
   Future<void> _toggleStatus(TaskEntitie task) async {
-    // Call controller and wait
-    await ref
+    final success = await ref
         .read(toggleTaskControllerProvider.notifier)
         .toggleTaskCompletion(task.id);
-    // THEN refresh the main list IF mounted (detail screen doesn't auto-refresh)
-    if (mounted) {
-      ref.read(tasksProvider.notifier).refreshTasks();
-      // Optionally, force refresh this screen too if needed, though watching taskDetailProvider might handle it
-      // ref.invalidate(taskDetailProvider(widget.taskId));
+
+    if (success && mounted) {
+      await ref.read(tasksProvider.notifier).refreshTasks();
+      // Refrescar el detalle
+      ref.invalidate(taskDetailProvider(widget.taskId));
     }
   }
 
   void _editTask(TaskEntitie task) {
-    // Pasa la tarea completa al formulario para modo edición
     context.push('${RouteNames.home}/edit', extra: task);
   }
 
@@ -80,13 +75,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       appBar: AppBar(
         title: const Text('Detalle de Tarea'),
         actions: [
-          // Mostrar acciones solo si la tarea cargó
           taskAsync.when(
             data: (task) {
               if (task == null) return const SizedBox.shrink();
               return Row(
                 children: [
-                  // No se pueden editar tareas de API
                   if (task.source != TaskSource.api)
                     IconButton(
                       icon: const Icon(Icons.edit_outlined),
@@ -131,7 +124,6 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Título
                 Text(
                   task.title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -140,7 +132,6 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Badges
                 Wrap(
                   spacing: 8.0,
                   runSpacing: 8.0,
@@ -189,7 +180,6 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Descripción
                 Text(
                   'Descripción',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -205,13 +195,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 ),
                 const Divider(height: 32),
 
-                // Fechas
                 Text('Creada: ${_formatDate(task.createdAt)}'),
                 const SizedBox(height: 8),
                 Text('Actualizada: ${_formatDate(task.updatedAt)}'),
                 const SizedBox(height: 32),
 
-                // Botón de acción
                 ElevatedButton.icon(
                   onPressed: () => _toggleStatus(task),
                   icon: Icon(

@@ -34,7 +34,7 @@ final class FetchApiTasksControllerProvider
 }
 
 String _$fetchApiTasksControllerHash() =>
-    r'85c703065c520a4606cd169cbd843c4cd9f2ddec';
+    r'7de96530eaab7562e2ef273dcd82413a4b8ad180';
 
 abstract class _$FetchApiTasksController extends $AsyncNotifier<void> {
   FutureOr<void> build();

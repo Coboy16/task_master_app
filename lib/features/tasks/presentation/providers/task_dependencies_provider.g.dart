@@ -94,7 +94,7 @@ final class DioProvider extends $FunctionalProvider<Dio, Dio, Dio>
   }
 }
 
-String _$dioHash() => r'acefcbe74683a492ea8791c5c99d12ae6d8ef6a4';
+String _$dioHash() => r'3cf35533f9c5441fdeddeaba7103ed6c40b955b4';
 
 @ProviderFor(uuid)
 const uuidProvider = UuidProvider._();

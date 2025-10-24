@@ -47,7 +47,7 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
-      return; // Validación falló
+      return;
     }
 
     setState(() {
@@ -58,19 +58,25 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
 
     try {
       if (_isEditMode) {
-        // --- MODO EDITAR ---
         final updatedTask = widget.initialTask!.copyWith(
           title: _titleController.text,
           description: _descriptionController.text,
           priority: _priority,
-          updatedAt: DateTime.now(), // Actualizar fecha
+          updatedAt: DateTime.now(),
         );
 
         success = await ref
             .read(updateTaskControllerProvider.notifier)
             .updateTask(updatedTask);
+
+        if (success && mounted) {
+          // Refrescar la lista de tareas
+          await ref.read(tasksProvider.notifier).refreshTasks();
+
+          // Invalidar el detalle para que se recargue
+          ref.invalidate(taskDetailProvider(widget.initialTask!.id));
+        }
       } else {
-        // --- MODO CREAR ---
         success = await ref
             .read(createTaskControllerProvider.notifier)
             .createTask(
@@ -84,11 +90,9 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            SnackBar(content: Text('Tarea guardada exitosamente')),
+            const SnackBar(content: Text('Tarea guardada exitosamente')),
           );
         context.pop();
-      } else if (mounted) {
-        // El error se muestra desde el listener
       }
     } finally {
       if (mounted) {
@@ -101,7 +105,6 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Escuchar errores de los controladores
     ref.listen<AsyncValue<void>>(createTaskControllerProvider, (prev, next) {
       if (next.hasError) {
         ScaffoldMessenger.of(context)
@@ -136,13 +139,12 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- Título ---
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(
                   labelText: 'Título',
                   border: OutlineInputBorder(),
-                  counterText: '', // Ocultar contador
+                  counterText: '',
                 ),
                 maxLength: 50,
                 validator: (value) {
@@ -158,7 +160,6 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // --- Descripción ---
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(
@@ -178,7 +179,6 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // --- Prioridad ---
               DropdownButtonFormField<TaskPriority>(
                 value: _priority,
                 decoration: const InputDecoration(
@@ -209,7 +209,6 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
               ),
               const SizedBox(height: 32),
 
-              // --- Botón Guardar ---
               ElevatedButton(
                 onPressed: _isSaving ? null : _submit,
                 style: ElevatedButton.styleFrom(
@@ -227,7 +226,6 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
                     : const Text('Guardar'),
               ),
 
-              // --- Botón Cancelar ---
               TextButton(
                 onPressed: _isSaving ? null : () => context.pop(),
                 child: const Text('Cancelar'),

@@ -34,7 +34,7 @@ final class ToggleTaskControllerProvider
 }
 
 String _$toggleTaskControllerHash() =>
-    r'ee3c444896bc9826104ac6940843e1f2b5e0b913';
+    r'f5feaa416ba9981398856e8e563341703be1130e';
 
 abstract class _$ToggleTaskController extends $AsyncNotifier<TaskEntitie?> {
   FutureOr<TaskEntitie?> build();

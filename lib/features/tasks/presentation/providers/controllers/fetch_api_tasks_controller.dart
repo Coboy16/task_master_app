@@ -20,18 +20,42 @@ class FetchApiTasksController extends _$FetchApiTasksController {
   }
 
   Future<bool> fetchTasksFromApi() async {
-    state = const AsyncValue.loading();
-    final userId = _getCurrentUserId();
-    if (userId == null) {
-      if (kDebugMode) print('Error: Usuario no autenticado');
-      state = AsyncValue.error('Usuario no autenticado', StackTrace.current);
-      return false;
-    }
+    final link = ref.keepAlive();
 
-    final usecase = ref.read(fetchTasksFromApiUsecaseProvider);
-    final result = await usecase(userId);
+    try {
+      if (!ref.mounted) {
+        if (kDebugMode) {
+          print('FetchApiTasksController no está montado al inicio');
+        }
+        return false;
+      }
 
-    if (!state.hasError && !state.isLoading) {
+      state = const AsyncValue.loading();
+
+      final userId = _getCurrentUserId();
+      if (userId == null) {
+        if (kDebugMode) print('Error: Usuario no autenticado');
+        if (ref.mounted) {
+          state = AsyncValue.error(
+            'Usuario no autenticado',
+            StackTrace.current,
+          );
+        }
+        return false;
+      }
+
+      final usecase = ref.read(fetchTasksFromApiUsecaseProvider);
+      final result = await usecase(userId);
+
+      if (!ref.mounted) {
+        if (kDebugMode) {
+          print(
+            'FetchApiTasksController fue desechado durante la operación async',
+          );
+        }
+        return false;
+      }
+
       return result.fold(
         (failure) {
           if (kDebugMode) {
@@ -43,20 +67,15 @@ class FetchApiTasksController extends _$FetchApiTasksController {
         (tasks) {
           if (kDebugMode) print('${tasks.length} tareas traídas desde la API');
 
-          if (!state.hasError && !state.isLoading) {
+          if (ref.mounted) {
             ref.read(tasksProvider.notifier).loadTasks();
             state = const AsyncValue.data(null);
           }
           return true;
         },
       );
-    } else {
-      if (kDebugMode) {
-        print(
-          'FetchApiTasksController fue desechado o entró en error antes de completar.',
-        );
-      }
-      return false;
+    } finally {
+      link.close();
     }
   }
 }

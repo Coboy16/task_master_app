@@ -34,7 +34,7 @@ final class UpdateTaskControllerProvider
 }
 
 String _$updateTaskControllerHash() =>
-    r'02c912e53172a00ece4782ff28856784d1e3c85f';
+    r'c51e39f7e3a88e4ebcbaa9ba7efc918471efff9d';
 
 abstract class _$UpdateTaskController extends $AsyncNotifier<void> {
   FutureOr<void> build();

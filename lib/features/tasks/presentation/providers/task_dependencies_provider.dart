@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+import 'package:dio/dio.dart';
 
 import '/core/core.dart';
 import '/features/tasks/data/data.dart';
@@ -18,12 +19,34 @@ FirebaseFirestore firestore(Ref ref) {
 
 @Riverpod(keepAlive: true)
 Dio dio(Ref ref) {
-  return Dio(
+  final dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'TaskMaster-Flutter-App/1.0',
+      },
+      validateStatus: (status) {
+        return status != null && status >= 200 && status < 300;
+      },
     ),
   );
+
+  if (kDebugMode) {
+    dio.interceptors.add(
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        error: true,
+        requestHeader: true,
+        responseHeader: false,
+      ),
+    );
+  }
+
+  return dio;
 }
 
 @Riverpod(keepAlive: true)

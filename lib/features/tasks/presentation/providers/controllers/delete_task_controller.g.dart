@@ -34,7 +34,7 @@ final class DeleteTaskControllerProvider
 }
 
 String _$deleteTaskControllerHash() =>
-    r'1cf78006a1800951440a82d4d3d9cb85f2343d21';
+    r'059218ef84e2d31e423d53b98192242b814b25f4';
 
 abstract class _$DeleteTaskController extends $AsyncNotifier<void> {
   FutureOr<void> build();

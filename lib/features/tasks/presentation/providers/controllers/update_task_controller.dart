@@ -12,30 +12,43 @@ class UpdateTaskController extends _$UpdateTaskController {
   Future<void> build() async {}
 
   Future<bool> updateTask(TaskEntitie task) async {
-    state = const AsyncValue.loading();
+    final link = ref.keepAlive();
+
     try {
+      if (!ref.mounted) {
+        if (kDebugMode) {
+          print('UpdateTaskController ya no está montado al inicio.');
+        }
+        return false;
+      }
+
+      state = const AsyncValue.loading();
+
       final usecase = ref.read(updateTaskUsecaseProvider);
       final result = await usecase(task);
 
-      return result.fold(
-        (failure) {
-          if (kDebugMode) {
-            print('Error al actualizar tarea: ${failure.message}');
-          }
-          state = AsyncValue.error(failure.message, StackTrace.current);
-          return false;
-        },
-        (updatedTask) {
-          if (kDebugMode) print('Tarea actualizada: ${updatedTask.id}');
-          ref.read(tasksProvider.notifier).loadTasks();
-          state = const AsyncValue.data(null);
-          return true;
-        },
-      );
-    } catch (e, s) {
-      if (kDebugMode) print('Error inesperado al actualizar tarea: $e');
-      state = AsyncValue.error('Error inesperado. Intenta nuevamente.', s);
-      return false;
+      if (ref.mounted) {
+        result.fold(
+          (failure) {
+            if (kDebugMode) {
+              print('Error al actualizar tarea: ${failure.message}');
+            }
+            state = AsyncValue.error(failure.message, StackTrace.current);
+          },
+          (_) {
+            if (kDebugMode) {
+              print('Tarea actualizada exitosamente en controlador');
+            }
+            state = const AsyncValue.data(null);
+          },
+        );
+        return true;
+      } else {
+        if (kDebugMode) print('UpdateTaskController desechado durante await.');
+        return false;
+      }
+    } finally {
+      link.close();
     }
   }
 }

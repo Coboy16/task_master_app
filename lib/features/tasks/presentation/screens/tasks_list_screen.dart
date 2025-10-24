@@ -24,11 +24,12 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
   }
 
   Future<void> _toggleTask(String taskId) async {
-    await ref
+    final success = await ref
         .read(toggleTaskControllerProvider.notifier)
         .toggleTaskCompletion(taskId);
-    if (mounted) {
-      ref.read(tasksProvider.notifier).refreshTasks();
+
+    if (success && mounted) {
+      await ref.read(tasksProvider.notifier).refreshTasks();
     }
   }
 
@@ -76,7 +77,6 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
       appBar: AppBar(
         title: const Text('Mis Tareas'),
         actions: [
-          // Botón de Sincronización (solo para usuarios NO invitados)
           if (!isGuest)
             IconButton(
               icon: const Icon(Icons.sync),
@@ -91,40 +91,106 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
               },
             ),
 
-          // Botón de Traer de API
           IconButton(
             icon: const Icon(Icons.cloud_download_outlined),
             tooltip: 'Traer de API (Demo)',
-            onPressed: () {
-              ref
-                  .read(fetchApiTasksControllerProvider.notifier)
-                  .fetchTasksFromApi();
+            onPressed: () async {
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
                 ..showSnackBar(
-                  const SnackBar(content: Text('Obteniendo tareas de API...')),
+                  const SnackBar(
+                    content: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Text('Obteniendo tareas de API...'),
+                      ],
+                    ),
+                    duration: Duration(seconds: 30),
+                  ),
                 );
+
+              try {
+                final success = await ref
+                    .read(fetchApiTasksControllerProvider.notifier)
+                    .fetchTasksFromApi();
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+                if (success) {
+                  await ref.read(tasksProvider.notifier).refreshTasks();
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Colors.white),
+                            SizedBox(width: 16),
+                            Text('✓ Tareas obtenidas exitosamente'),
+                          ],
+                        ),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.error, color: Colors.white),
+                            SizedBox(width: 16),
+                            Text('✗ Error al obtener tareas'),
+                          ],
+                        ),
+                        backgroundColor: Colors.red,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                }
+              }
             },
           ),
         ],
       ),
       body: Column(
         children: [
-          // TODO: Implementar TaskFilterTabs()
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             color: Colors.grey.shade100,
             child: const Center(child: Text('Placeholder: TaskFilterTabs')),
           ),
 
-          // TODO: Implementar TaskStatsBar()
           Container(
             padding: const EdgeInsets.all(8),
             color: Colors.blue.shade50,
             child: const Center(child: Text('Placeholder: TaskStatsBar')),
           ),
 
-          // Lista de tareas
           Expanded(
             child: tasksState.when(
               data: (state) => state.when(
@@ -153,22 +219,27 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                   if (tasks.isEmpty) {
                     return RefreshIndicator(
                       onRefresh: _refreshTasks,
-                      child: const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.inbox_outlined,
-                              size: 64,
-                              color: Colors.grey,
+                      child: ListView(
+                        children: const [
+                          SizedBox(height: 100),
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.inbox_outlined,
+                                  size: 64,
+                                  color: Colors.grey,
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  'No tienes tareas por aquí.',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ],
                             ),
-                            SizedBox(height: 16),
-                            Text(
-                              'No tienes tareas por aquí.',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     );
                   }
@@ -179,7 +250,6 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                       itemCount: tasks.length,
                       itemBuilder: (context, index) {
                         final task = tasks[index];
-                        // TODO: Reemplazar con SwipeableTaskItem
                         return ListTile(
                           title: Text(
                             task.title,
@@ -197,7 +267,6 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                           leading: Checkbox(
                             value: task.isCompleted,
                             onChanged: (val) {
-                              // Call the async helper function
                               _toggleTask(task.id);
                             },
                           ),
@@ -209,7 +278,6 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
                             onPressed: () => _showDeleteConfirmation(task.id),
                           ),
                           onTap: () {
-                            // Navegar a detalle
                             context.push('${RouteNames.home}/${task.id}');
                           },
                         );
@@ -226,7 +294,6 @@ class _TasksListScreenState extends ConsumerState<TasksListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Navegar a crear tarea
           context.push('${RouteNames.home}/new');
         },
         child: const Icon(Icons.add),
