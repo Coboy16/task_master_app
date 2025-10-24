@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:dio/dio.dart';
 
 import '/core/core.dart';
+import '/features/auth/auth.dart';
 import '/features/tasks/data/data.dart';
 import '/features/tasks/domain/domain.dart';
 
@@ -77,5 +78,6 @@ TaskRepository taskRepository(Ref ref) {
   return TaskRepositoryImpl(
     localDatasource: ref.watch(taskLocalDatasourceProvider),
     remoteDatasource: ref.watch(taskRemoteDatasourceProvider),
+    authLocalDatasource: ref.watch(authLocalDatasourceProvider),
   );
 }

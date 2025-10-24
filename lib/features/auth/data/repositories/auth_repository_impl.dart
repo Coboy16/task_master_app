@@ -22,16 +22,13 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      // 1. Login en Firebase
       final userModel = await _remoteDatasource.loginWithEmail(
         email: email,
         password: password,
       );
 
-      // 2. Guardar en SQLite
       await _localDatasource.saveUser(userModel);
 
-      // 3. Retornar entidad
       return Right(userModel.toEntity());
     } on AuthException catch (e) {
       return Left(Failure.auth(message: e.message));
@@ -54,17 +51,14 @@ class AuthRepositoryImpl implements AuthRepository {
     required String name,
   }) async {
     try {
-      // 1. Registrar en Firebase
       final userModel = await _remoteDatasource.registerWithEmail(
         email: email,
         password: password,
         name: name,
       );
 
-      // 2. Guardar en SQLite
       await _localDatasource.saveUser(userModel);
 
-      // 3. Retornar entidad
       return Right(userModel.toEntity());
     } on AuthException catch (e) {
       return Left(Failure.auth(message: e.message));
@@ -83,7 +77,6 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, User>> createGuestUser({required String name}) async {
     try {
-      // Crear usuario invitado solo en SQLite
       final userModel = await _localDatasource.createGuestUser(name);
 
       return Right(userModel.toEntity());
@@ -120,20 +113,18 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, void>> logout() async {
     try {
-      // 1. Logout de Firebase (si está autenticado)
       final currentFirebaseUser = _remoteDatasource.getCurrentFirebaseUser();
       if (currentFirebaseUser != null) {
         await _remoteDatasource.logout();
       }
 
-      // 2. Limpiar sesión local
       await _localDatasource.clearSession();
 
       return const Right(null);
     } on AuthException catch (e) {
       return Left(Failure.auth(message: e.message));
     } on CacheException catch (e) {
-      return Left(Failure.cache(message: e.message));
+      return Left(Failure.cache(message: e.toString()));
     } catch (e) {
       if (kDebugMode) {
         print('Error al cerrar sesión: $e');
@@ -165,51 +156,160 @@ class AuthRepositoryImpl implements AuthRepository {
       }
 
       if (kDebugMode) {
-        print('🔄 Iniciando migración de usuario invitado: ${guestUser.name}');
+        print('Iniciando migración de usuario invitado: ${guestUser.name}');
       }
 
       // 2. Crear cuenta en Firebase Auth con el nombre del usuario guest
       final firebaseUser = await _remoteDatasource.registerWithEmail(
         email: email,
         password: password,
-        name: guestUser.name, // Usar el nombre del guest
+        name: guestUser.name,
       );
 
       if (kDebugMode) {
-        print('✅ Cuenta Firebase creada: ${firebaseUser.firebaseUid}');
+        print(' Cuenta Firebase creada: ${firebaseUser.firebaseUid}');
       }
 
-      // 3. TODO: Migrar tareas locales a Firestore
-      // Esto lo implementaremos cuando tengamos el TaskRepository
-      // await _migrateLocalTasksToFirestore(guestUserId, firebaseUser.firebaseUid!);
+      // 3. Migrar tareas locales a Firestore
+      await _migrateLocalTasksToFirestore(
+        guestUserId,
+        firebaseUser.firebaseUid!,
+      );
 
-      // 4. Eliminar el usuario invitado de SQLite
+      // 4. Actualizar todas las tareas en SQLite con el nuevo userId
       final db = await _localDatasource.database;
+      await db.update(
+        'tasks',
+        {'user_id': firebaseUser.id},
+        where: 'user_id = ?',
+        whereArgs: [guestUserId],
+      );
+
+      if (kDebugMode) {
+        print('Tareas actualizadas con nuevo userId');
+      }
+
+      // 5. Eliminar el usuario invitado de SQLite
       await db.delete('users', where: 'id = ?', whereArgs: [guestUserId]);
 
       if (kDebugMode) {
-        print('✅ Usuario invitado eliminado de SQLite');
+        print('Usuario invitado eliminado de SQLite');
       }
 
-      // 5. Eliminar token de invitado de SharedPreferences
+      // 6. Limpiar sesión anterior
       await _localDatasource.clearSession();
 
-      // 6. Guardar el nuevo usuario autenticado en SQLite
+      // 7. Guardar el nuevo usuario autenticado en SQLite
       await _localDatasource.saveUser(firebaseUser);
 
       if (kDebugMode) {
-        print('✅ Migración completada exitosamente');
+        print('Migración completada exitosamente');
       }
 
-      // 7. Retornar el usuario autenticado
       return Right(firebaseUser.toEntity());
     } on firebase_auth.FirebaseAuthException catch (e) {
       if (kDebugMode) {
-        print('❌ Firebase Auth Error en migración: ${e.code} - ${e.message}');
+        print('Firebase Auth Error en migración: ${e.code} - ${e.message}');
       }
 
       final errorMessage = FirebaseError.getAuthErrorMessage(e.code);
       return Left(Failure.auth(message: errorMessage));
+    } catch (e, s) {
+      if (kDebugMode) {
+        print('Error inesperado en migración: $e');
+        print(s);
+      }
+      return Left(Failure.unexpected(message: e.toString()));
+    }
+  }
+
+  /// Migra las tareas locales del usuario invitado a Firestore
+  Future<void> _migrateLocalTasksToFirestore(
+    String guestUserId,
+    String firebaseUid,
+  ) async {
+    try {
+      if (kDebugMode) {
+        print('Iniciando migración de tareas a Firestore...');
+        print('Usando firebaseUid: $firebaseUid');
+      }
+
+      final db = await _localDatasource.database;
+
+      final tasksData = await db.query(
+        'tasks',
+        where: 'user_id = ? AND deleted = ?',
+        whereArgs: [guestUserId, 0],
+      );
+
+      if (tasksData.isEmpty) {
+        if (kDebugMode) {
+          print('No hay tareas para migrar');
+        }
+        return;
+      }
+
+      if (kDebugMode) {
+        print('Migrando ${tasksData.length} tareas...');
+      }
+
+      int successCount = 0;
+      int errorCount = 0;
+
+      for (final taskData in tasksData) {
+        try {
+          final taskMap = Map<String, dynamic>.from(taskData);
+
+          final createdAt = DateTime.parse(taskMap['created_at'] as String);
+          final updatedAt = DateTime.parse(taskMap['updated_at'] as String);
+
+          final firestoreData = {
+            'title': taskMap['title'],
+            'description': taskMap['description'],
+            'isCompleted': taskMap['is_completed'] == 1,
+            'priority': taskMap['priority'],
+            'source': taskMap['source'],
+            'createdAt': createdAt,
+            'updatedAt': updatedAt,
+            'deleted': false,
+          };
+
+          final docRef = await _remoteDatasource.firestore
+              .collection('users')
+              .doc(firebaseUid)
+              .collection('tasks')
+              .add(firestoreData);
+
+          await db.update(
+            'tasks',
+            {'firebase_id': docRef.id, 'synced': 1},
+            where: 'id = ?',
+            whereArgs: [taskMap['id']],
+          );
+
+          successCount++;
+
+          if (kDebugMode) {
+            print('Tarea migrada: ${taskMap['title']}');
+          }
+        } catch (e) {
+          errorCount++;
+          if (kDebugMode) {
+            print(' Error al migrar tarea: $e');
+          }
+        }
+      }
+
+      if (kDebugMode) {
+        print('Migración de tareas completada:');
+        print('- Exitosas: $successCount');
+        print('- Con errores: $errorCount');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print(' Error crítico en migración de tareas: $e');
+      }
+      throw Exception('Error al migrar tareas: $e');
     }
   }
 

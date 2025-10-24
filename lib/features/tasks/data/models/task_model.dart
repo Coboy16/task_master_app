@@ -60,7 +60,6 @@ abstract class TaskModel with _$TaskModel {
       'isCompleted': isCompleted,
       'priority': priority,
       'source': source,
-      'userId': userId,
       'createdAt': Timestamp.fromDate(DateTime.parse(createdAt)),
       'updatedAt': Timestamp.fromDate(DateTime.parse(updatedAt)),
       'deleted': deleted,

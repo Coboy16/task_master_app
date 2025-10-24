@@ -36,36 +36,53 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         RouteNames.login,
         RouteNames.register,
         RouteNames.noAccount,
-        RouteNames.linkAccount,
       ];
+
       final isPublicRoute = publicRoutes.contains(currentLocation);
 
       return authState.when(
         initial: () => RouteNames.splash,
         loading: () => RouteNames.splash,
 
-        authenticated: (_) {
+        authenticated: (user) {
+          if (user.isGuest && currentLocation == RouteNames.linkAccount) {
+            return null;
+          }
+
+          // Si está autenticado (no invitado) y intenta ir a linkAccount, redirigir a home
+          if (!user.isGuest && currentLocation == RouteNames.linkAccount) {
+            return RouteNames.home;
+          }
+
           // Si está autenticado y en una ruta pública (que no sea splash)
           if (isPublicRoute && currentLocation != RouteNames.splash) {
             return RouteNames.home;
           }
+
           // Si está autenticado y en splash, llévalo a home
           if (currentLocation == RouteNames.splash) {
             return RouteNames.home;
           }
+
           // En cualquier otro caso (ya en home o subrutas), déjalo estar
           return null;
         },
 
         unauthenticated: () {
+          if (currentLocation == RouteNames.linkAccount) {
+            return RouteNames.login;
+          }
+
           // Si no está autenticado y está en una ruta protegida
           if (!isPublicRoute && currentLocation != RouteNames.splash) {
             return RouteNames.login;
           }
+
           // Si no está autenticado y está en splash (después de cargar), llévalo a login
           if (currentLocation == RouteNames.splash) {
             return RouteNames.login;
           }
+
           // En cualquier otro caso (ya en login, register, etc.), déjalo estar
           return null;
         },

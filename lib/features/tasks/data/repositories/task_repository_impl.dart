@@ -4,18 +4,34 @@ import 'package:uuid/uuid.dart';
 
 import '/features/tasks/data/data.dart';
 import '/features/tasks/domain/domain.dart';
+import '/features/auth/data/data.dart';
 import '/core/core.dart';
 
 class TaskRepositoryImpl implements TaskRepository {
   final TaskLocalDatasource _localDatasource;
   final TaskRemoteDatasource _remoteDatasource;
+  final AuthLocalDatasource _authLocalDatasource;
 
   TaskRepositoryImpl({
     required TaskLocalDatasource localDatasource,
     required TaskRemoteDatasource remoteDatasource,
+    required AuthLocalDatasource authLocalDatasource,
     Uuid? uuid,
   }) : _localDatasource = localDatasource,
-       _remoteDatasource = remoteDatasource;
+       _remoteDatasource = remoteDatasource,
+       _authLocalDatasource = authLocalDatasource;
+
+  Future<String?> _getFirebaseUid() async {
+    try {
+      final user = await _authLocalDatasource.getCurrentUser();
+      return user?.firebaseUid;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error al obtener firebaseUid: $e');
+      }
+      return null;
+    }
+  }
 
   @override
   Future<Either<Failure, List<TaskEntitie>>> getTasks({
@@ -23,13 +39,11 @@ class TaskRepositoryImpl implements TaskRepository {
     TaskFilter? filter,
   }) async {
     try {
-      // Estrategia offline-first: siempre obtener de SQLite
       final localTasks = await _localDatasource.getTasksByFilter(
         userId: userId,
         filter: filter,
       );
 
-      // Intentar sincronizar en background (no bloqueante)
       _syncInBackground(userId);
 
       return Right(localTasks.map((model) => model.toEntity()).toList());
@@ -71,33 +85,39 @@ class TaskRepositoryImpl implements TaskRepository {
       // 1. Guardar primero en SQLite (offline-first)
       await _localDatasource.insertTask(taskModel);
 
-      // 2. Intentar subir a Firestore si es usuario autenticado
+      // 2. Intentar subir a Firestore SOLO si NO es tarea de API
       try {
-        // Verificar si tiene firebaseUid (usuario autenticado)
-        // TODO: Esta verificación debería venir del auth state
-        final shouldSync = true; // Por ahora siempre intentar
+        final shouldSync = task.source != TaskSource.api;
 
-        if (shouldSync && task.source != TaskSource.api) {
-          final firebaseTask = await _remoteDatasource.createTaskInFirestore(
-            taskModel,
-            task.userId,
-          );
+        if (shouldSync) {
+          final firebaseUid = await _getFirebaseUid();
 
-          // Actualizar con firebaseId y marcar como sincronizado
-          final syncedTask = taskModel.copyWith(
-            firebaseId: firebaseTask.firebaseId,
-            synced: true,
-          );
+          if (firebaseUid != null) {
+            final firebaseTask = await _remoteDatasource.createTaskInFirestore(
+              taskModel,
+              firebaseUid,
+            );
 
-          await _localDatasource.updateTask(syncedTask);
+            final syncedTask = taskModel.copyWith(
+              firebaseId: firebaseTask.firebaseId,
+              synced: true,
+            );
 
-          return Right(syncedTask.toEntity());
+            await _localDatasource.updateTask(syncedTask);
+
+            return Right(syncedTask.toEntity());
+          } else {
+            if (kDebugMode) {
+              print(
+                'Usuario no tiene firebaseUid, tarea guardada solo localmente',
+              );
+            }
+          }
         }
       } on ServerException catch (e) {
         if (kDebugMode) {
           print('No se pudo sincronizar con Firestore: ${e.message}');
         }
-        // No es un error crítico, la tarea está guardada localmente
       }
 
       return Right(taskModel.toEntity());
@@ -116,23 +136,27 @@ class TaskRepositoryImpl implements TaskRepository {
   @override
   Future<Either<Failure, TaskEntitie>> updateTask(TaskEntitie task) async {
     try {
-      final taskModel = TaskModel.fromEntity(task).copyWith(
-        synced: false, // Marcar como no sincronizado
-      );
+      final taskModel = TaskModel.fromEntity(task).copyWith(synced: false);
 
-      // 1. Actualizar en SQLite
       await _localDatasource.updateTask(taskModel);
 
-      // 2. Intentar actualizar en Firestore
       try {
-        if (taskModel.firebaseId != null) {
-          await _remoteDatasource.updateTaskInFirestore(taskModel, task.userId);
+        final shouldSync = taskModel.firebaseId != null;
 
-          // Marcar como sincronizado
-          await _localDatasource.markTaskAsSynced(
-            task.id,
-            taskModel.firebaseId,
-          );
+        if (shouldSync) {
+          final firebaseUid = await _getFirebaseUid();
+
+          if (firebaseUid != null) {
+            await _remoteDatasource.updateTaskInFirestore(
+              taskModel,
+              firebaseUid,
+            );
+
+            await _localDatasource.markTaskAsSynced(
+              task.id,
+              taskModel.firebaseId,
+            );
+          }
         }
       } on ServerException catch (e) {
         if (kDebugMode) {
@@ -154,23 +178,26 @@ class TaskRepositoryImpl implements TaskRepository {
   @override
   Future<Either<Failure, void>> deleteTask(String id) async {
     try {
-      // 1. Obtener la tarea
       final task = await _localDatasource.getTaskById(id);
 
       if (task == null) {
         return const Left(Failure.cache(message: 'Tarea no encontrada'));
       }
 
-      // 2. Soft delete en SQLite
       await _localDatasource.deleteTask(id);
 
-      // 3. Intentar eliminar en Firestore
       try {
-        if (task.firebaseId != null) {
-          await _remoteDatasource.deleteTaskInFirestore(
-            task.firebaseId!,
-            task.userId,
-          );
+        final shouldSync = task.firebaseId != null;
+
+        if (shouldSync) {
+          final firebaseUid = await _getFirebaseUid();
+
+          if (firebaseUid != null) {
+            await _remoteDatasource.deleteTaskInFirestore(
+              task.firebaseId!,
+              firebaseUid,
+            );
+          }
         }
       } on ServerException catch (e) {
         if (kDebugMode) {
@@ -192,31 +219,33 @@ class TaskRepositoryImpl implements TaskRepository {
   @override
   Future<Either<Failure, TaskEntitie>> toggleTaskCompletion(String id) async {
     try {
-      // 1. Obtener la tarea
       final task = await _localDatasource.getTaskById(id);
 
       if (task == null) {
         return const Left(Failure.cache(message: 'Tarea no encontrada'));
       }
 
-      // 2. Cambiar el estado
       final updatedTask = task.copyWith(
         isCompleted: !task.isCompleted,
         synced: false,
       );
 
-      // 3. Actualizar en SQLite
       await _localDatasource.updateTask(updatedTask);
 
-      // 4. Intentar sincronizar
       try {
-        if (updatedTask.firebaseId != null) {
-          await _remoteDatasource.updateTaskInFirestore(
-            updatedTask,
-            task.userId,
-          );
+        final shouldSync = updatedTask.firebaseId != null;
 
-          await _localDatasource.markTaskAsSynced(id, updatedTask.firebaseId);
+        if (shouldSync) {
+          final firebaseUid = await _getFirebaseUid();
+
+          if (firebaseUid != null) {
+            await _remoteDatasource.updateTaskInFirestore(
+              updatedTask,
+              firebaseUid,
+            );
+
+            await _localDatasource.markTaskAsSynced(id, updatedTask.firebaseId);
+          }
         }
       } on ServerException catch (e) {
         if (kDebugMode) {
@@ -240,15 +269,12 @@ class TaskRepositoryImpl implements TaskRepository {
     String userId,
   ) async {
     try {
-      // 1. Obtener tareas de la API
       final apiTasks = await _remoteDatasource.fetchTasksFromApi();
 
-      // 2. Actualizar userId con el del usuario actual
       final tasksWithUserId = apiTasks.map((task) {
         return task.copyWith(userId: userId);
       }).toList();
 
-      // 3. Guardar en SQLite
       await _localDatasource.insertTasks(tasksWithUserId);
 
       return Right(tasksWithUserId.map((model) => model.toEntity()).toList());
@@ -269,7 +295,15 @@ class TaskRepositoryImpl implements TaskRepository {
   @override
   Future<Either<Failure, void>> syncTasks(String userId) async {
     try {
-      // 1. Obtener tareas no sincronizadas
+      final firebaseUid = await _getFirebaseUid();
+
+      if (firebaseUid == null) {
+        if (kDebugMode) {
+          print('Usuario invitado: sincronización omitida');
+        }
+        return const Right(null);
+      }
+
       final unsyncedTasks = await _localDatasource.getUnsyncedTasks(userId);
 
       if (unsyncedTasks.isEmpty) {
@@ -279,14 +313,12 @@ class TaskRepositoryImpl implements TaskRepository {
         return const Right(null);
       }
 
-      // 2. Sincronizar cada tarea
       for (final task in unsyncedTasks) {
         try {
           if (task.firebaseId == null) {
-            // Crear en Firestore
             final firebaseTask = await _remoteDatasource.createTaskInFirestore(
               task,
-              userId,
+              firebaseUid,
             );
 
             await _localDatasource.markTaskAsSynced(
@@ -294,8 +326,7 @@ class TaskRepositoryImpl implements TaskRepository {
               firebaseTask.firebaseId,
             );
           } else {
-            // Actualizar en Firestore
-            await _remoteDatasource.updateTaskInFirestore(task, userId);
+            await _remoteDatasource.updateTaskInFirestore(task, firebaseUid);
 
             await _localDatasource.markTaskAsSynced(task.id, task.firebaseId);
           }
@@ -303,7 +334,6 @@ class TaskRepositoryImpl implements TaskRepository {
           if (kDebugMode) {
             print('Error al sincronizar tarea ${task.id}: $e');
           }
-          // Continuar con las demás tareas
         }
       }
 
@@ -353,15 +383,17 @@ class TaskRepositoryImpl implements TaskRepository {
     }
   }
 
-  /// Sincronización en background (no bloqueante)
   Future<void> _syncInBackground(String userId) async {
     try {
+      final firebaseUid = await _getFirebaseUid();
+      if (firebaseUid == null) {
+        return;
+      }
       await syncTasks(userId);
     } catch (e) {
       if (kDebugMode) {
         print('Error en sincronización background: $e');
       }
-      // No propagamos el error
     }
   }
 }

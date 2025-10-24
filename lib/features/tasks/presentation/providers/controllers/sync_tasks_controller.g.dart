@@ -34,7 +34,7 @@ final class SyncTasksControllerProvider
 }
 
 String _$syncTasksControllerHash() =>
-    r'a75f69d715d87f8878fd04433d4994f18bf2d6bf';
+    r'80bf531960eaeeff973b0e75036776e871bff1fb';
 
 abstract class _$SyncTasksController extends $AsyncNotifier<void> {
   FutureOr<void> build();

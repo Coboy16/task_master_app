@@ -17,7 +17,6 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Perfil'),
         actions: [
-          // Botón de logout
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Cerrar sesión',
@@ -54,7 +53,8 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
 
-                      if (user.email != null) Text(user.email!),
+                      if (user.email != null)
+                        Text(user.email!, style: const TextStyle(fontSize: 16)),
 
                       const SizedBox(height: 8),
 
@@ -72,17 +72,17 @@ class ProfileScreen extends ConsumerWidget {
 
                       const SizedBox(height: 32),
 
-                      // Mostrar botón de vincular solo si es usuario invitado
-                      if (user.isGuest) ...[
-                        _buildGuestCard(context, user),
-                      ] else ...[
-                        // Usuario autenticado con Firebase
-                        _buildAuthCard(context, user),
-                      ],
+                      // Mostrar botón o tarjeta según el modo
+                      if (user.isGuest)
+                        _buildGuestCard(context, user)
+                      else
+                        _buildAuthCard(context),
                     ],
                   ),
                   orElse: () => const CircularProgressIndicator(),
-                ),
+                )
+              else
+                const CircularProgressIndicator(),
             ],
           ),
         ),
@@ -90,6 +90,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  /// Tarjeta cuando el usuario está en modo invitado (local)
   Widget _buildGuestCard(BuildContext context, User user) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -141,7 +142,8 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAuthCard(BuildContext context, User user) {
+  /// Tarjeta cuando el usuario está autenticado con Firebase
+  Widget _buildAuthCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

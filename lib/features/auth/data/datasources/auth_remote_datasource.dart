@@ -34,6 +34,8 @@ abstract class AuthRemoteDatasource {
 
   /// Obtener usuario actual de Firebase Auth
   firebase_auth.User? getCurrentFirebaseUser();
+
+  FirebaseFirestore get firestore;
 }
 
 class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
@@ -48,6 +50,9 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
   }) : _firebaseAuth = firebaseAuth,
        _firestore = firestore,
        _uuid = uuid ?? const Uuid();
+
+  @override
+  FirebaseFirestore get firestore => _firestore;
 
   @override
   Future<UserModel> loginWithEmail({

@@ -19,33 +19,75 @@ class SyncTasksController extends _$SyncTasksController {
     );
   }
 
+  bool _isGuestUser() {
+    final authState = ref.read(authProvider).value;
+    return authState?.maybeWhen(
+          authenticated: (user) => user.isGuest,
+          orElse: () => true,
+        ) ??
+        true;
+  }
+
   Future<bool> syncTasks() async {
-    state = const AsyncValue.loading();
-    final userId = _getCurrentUserId();
-    if (userId == null) {
-      if (kDebugMode) print('Error: Usuario no autenticado');
-      state = AsyncValue.error('Usuario no autenticado', StackTrace.current);
-      return false;
-    }
+    final link = ref.keepAlive();
 
-    final usecase = ref.read(syncTasksUsecaseProvider);
-    final result = await usecase(userId);
-
-    return result.fold(
-      (failure) {
-        if (kDebugMode) {
-          print('Error al sincronizar tareas: ${failure.message}');
-        }
-        state = AsyncValue.error(failure.message, StackTrace.current);
+    try {
+      if (!ref.mounted) {
+        if (kDebugMode) print('SyncTasksController no está montado al inicio');
         return false;
-      },
-      (_) {
-        if (kDebugMode) print('Tareas sincronizadas exitosamente');
-        // Recargar la lista
-        ref.read(tasksProvider.notifier).loadTasks();
+      }
+
+      // Verificar si es usuario invitado
+      if (_isGuestUser()) {
+        if (kDebugMode) print('Usuario invitado: sincronización omitida');
         state = const AsyncValue.data(null);
-        return true;
-      },
-    );
+        return false;
+      }
+
+      state = const AsyncValue.loading();
+
+      final userId = _getCurrentUserId();
+      if (userId == null) {
+        if (kDebugMode) print('Error: Usuario no autenticado');
+        if (ref.mounted) {
+          state = AsyncValue.error(
+            'Usuario no autenticado',
+            StackTrace.current,
+          );
+        }
+        return false;
+      }
+
+      final usecase = ref.read(syncTasksUsecaseProvider);
+      final result = await usecase(userId);
+
+      if (!ref.mounted) {
+        if (kDebugMode) {
+          print('SyncTasksController fue desechado durante la operación async');
+        }
+        return false;
+      }
+
+      return result.fold(
+        (failure) {
+          if (kDebugMode) {
+            print('Error al sincronizar tareas: ${failure.message}');
+          }
+          state = AsyncValue.error(failure.message, StackTrace.current);
+          return false;
+        },
+        (_) {
+          if (kDebugMode) print('Tareas sincronizadas exitosamente');
+
+          if (ref.mounted) {
+            ref.read(tasksProvider.notifier).loadTasks();
+            state = const AsyncValue.data(null);
+          }
+          return true;
+        },
+      );
+    } finally {
+      link.close();
+    }
   }
 }
