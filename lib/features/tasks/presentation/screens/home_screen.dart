@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
+import 'package:task_master/features/pokemon/pokemon.dart';
 
 import '/core/core.dart';
 import 'screens.dart';
@@ -56,7 +57,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
       PersistentTabConfig(
-        screen: const ProfileScreen(),
+        screen: PokemonListScreen(),
+        // screen: const ProfileScreen(),
         item: ItemConfig(
           icon: const Icon(LucideIcons.user),
           title: "Perfil",

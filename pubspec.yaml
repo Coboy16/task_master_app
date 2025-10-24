@@ -82,9 +82,13 @@ dependencies:
   #ui
   persistent_bottom_nav_bar_v2: ^6.1.0
   toastification: ^3.0.3
+  shimmer: ^3.0.0
 
   #graphql
   graphql_flutter: ^5.2.1
+
+  #image
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   build_runner: ^2.5.0
