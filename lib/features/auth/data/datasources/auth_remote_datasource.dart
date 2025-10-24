@@ -136,9 +136,6 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
 
       await _firestore.collection('users').doc(firebaseUser.uid).set(userData);
 
-      // 3. Crear tarea de bienvenida
-      await _createWelcomeTask(firebaseUser.uid);
-
       if (kDebugMode) {
         print('Usuario registrado exitosamente: ${firebaseUser.uid}');
       }
@@ -164,37 +161,6 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
         print('Error al registrar usuario: $e');
       }
       throw AuthException('Error al registrar usuario: ${e.toString()}');
-    }
-  }
-
-  Future<void> _createWelcomeTask(String firebaseUserId) async {
-    try {
-      final now = DateTime.now();
-      final taskId = _uuid.v4();
-
-      final welcomeTask = {
-        'id': taskId,
-        'title': '¡Bienvenido a TaskMaster Pro!',
-        'description':
-            'Esta es tu primera tarea. Puedes editarla o eliminarla cuando quieras. ¡Empieza a organizar tus tareas ahora!',
-        'isCompleted': false,
-        'priority': 'media',
-        'source': 'firebase',
-        'userId': firebaseUserId,
-        'createdAt': Timestamp.fromDate(now),
-        'updatedAt': Timestamp.fromDate(now),
-        'deleted': false,
-      };
-
-      await _firestore.collection('tasks').doc(taskId).set(welcomeTask);
-
-      if (kDebugMode) {
-        print('Tarea de bienvenida creada: $taskId');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error al crear tarea de bienvenida: $e');
-      }
     }
   }
 

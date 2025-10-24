@@ -82,41 +82,73 @@ class TaskRepositoryImpl implements TaskRepository {
     try {
       final taskModel = TaskModel.fromEntity(task);
 
+      if (kDebugMode) {
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('CREAR TAREA');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('• Title: ${task.title}');
+        print('• userId (local): ${task.userId}');
+        print('• source: ${task.source.name}');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      }
+
       // 1. Guardar primero en SQLite (offline-first)
       await _localDatasource.insertTask(taskModel);
 
-      // 2. Intentar subir a Firestore SOLO si NO es tarea de API
+      if (kDebugMode) {
+        print('Tarea guardada en SQLite');
+      }
+
+      // 2. Intentar subir a Firestore
       try {
-        final shouldSync = task.source != TaskSource.api;
+        // Obtener firebaseUid del usuario actual
+        final firebaseUid = await _getFirebaseUid();
 
-        if (shouldSync) {
-          final firebaseUid = await _getFirebaseUid();
+        if (kDebugMode) {
+          print('FirebaseUid obtenido: $firebaseUid');
+        }
 
-          if (firebaseUid != null) {
-            final firebaseTask = await _remoteDatasource.createTaskInFirestore(
-              taskModel,
-              firebaseUid,
-            );
+        if (firebaseUid != null) {
+          if (kDebugMode) {
+            print('Intentando subir a Firestore...');
+            print('Ruta: users/$firebaseUid/tasks/');
+          }
 
-            final syncedTask = taskModel.copyWith(
-              firebaseId: firebaseTask.firebaseId,
-              synced: true,
-            );
+          final firebaseTask = await _remoteDatasource.createTaskInFirestore(
+            taskModel,
+            firebaseUid,
+          );
 
-            await _localDatasource.updateTask(syncedTask);
+          if (kDebugMode) {
+            print('Tarea subida exitosamente');
+            print('firebaseId: ${firebaseTask.firebaseId}');
+          }
 
-            return Right(syncedTask.toEntity());
-          } else {
-            if (kDebugMode) {
-              print(
-                'Usuario no tiene firebaseUid, tarea guardada solo localmente',
-              );
-            }
+          final syncedTask = taskModel.copyWith(
+            firebaseId: firebaseTask.firebaseId,
+            synced: true,
+          );
+
+          await _localDatasource.updateTask(syncedTask);
+
+          if (kDebugMode) {
+            print('Tarea marcada como sincronizada en SQLite');
+            print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+          }
+
+          return Right(syncedTask.toEntity());
+        } else {
+          if (kDebugMode) {
+            print('Usuario no tiene firebaseUid');
+            print('Tarea guardada solo localmente');
+            print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
           }
         }
       } on ServerException catch (e) {
         if (kDebugMode) {
-          print('No se pudo sincronizar con Firestore: ${e.message}');
+          print('Error al sincronizar con Firestore');
+          print('Error: ${e.message}');
+          print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
         }
       }
 
@@ -125,9 +157,11 @@ class TaskRepositoryImpl implements TaskRepository {
       return Left(Failure.cache(message: e.message));
     } on ServerException catch (e) {
       return Left(Failure.server(message: e.message));
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (kDebugMode) {
-        print('Error inesperado en createTask: $e');
+        print('Error inesperado en createTask');
+        print('Stack: $stackTrace');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       }
       return Left(Failure.unexpected(message: e.toString()));
     }
