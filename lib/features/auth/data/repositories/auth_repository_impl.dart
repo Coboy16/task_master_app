@@ -1,6 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 
 import '/features/auth/domain/domain.dart';
 import '/features/auth/data/data.dart';
@@ -22,13 +25,31 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
+      // 1. Login en Firebase
       final userModel = await _remoteDatasource.loginWithEmail(
         email: email,
         password: password,
       );
 
+      // 2. Guardar en SQLite
       await _localDatasource.saveUser(userModel);
 
+      if (kDebugMode) {
+        print('✅ Usuario guardado localmente');
+        print('🔄 Descargando tareas de Firestore...');
+      }
+
+      // 3. ✅ NUEVO: Descargar tareas de Firestore a SQLite
+      try {
+        await _downloadTasksFromFirestore(userModel);
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ Error al descargar tareas: $e');
+        }
+        // No es un error crítico, el login fue exitoso
+      }
+
+      // 4. Retornar entidad
       return Right(userModel.toEntity());
     } on AuthException catch (e) {
       return Left(Failure.auth(message: e.message));
@@ -41,6 +62,89 @@ class AuthRepositoryImpl implements AuthRepository {
         print('Error inesperado en login: $e');
       }
       return Left(Failure.unexpected(message: e.toString()));
+    }
+  }
+
+  /// Descarga todas las tareas del usuario desde Firestore a SQLite
+  Future<void> _downloadTasksFromFirestore(UserModel user) async {
+    try {
+      if (user.firebaseUid == null) {
+        if (kDebugMode) {
+          print('Usuario no tiene firebaseUid');
+        }
+        return;
+      }
+
+      final db = await _localDatasource.database;
+
+      // Obtener tareas de Firestore
+      final snapshot = await _remoteDatasource.firestore
+          .collection('users')
+          .doc(user.firebaseUid)
+          .collection('tasks')
+          .where('deleted', isEqualTo: false)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        if (kDebugMode) {
+          print('No hay tareas en Firestore para descargar');
+        }
+        return;
+      }
+
+      if (kDebugMode) {
+        print('Descargando ${snapshot.docs.length} tareas...');
+      }
+
+      int successCount = 0;
+
+      // Guardar cada tarea en SQLite
+      for (final doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          final taskId = const Uuid().v4();
+
+          final taskData = {
+            'id': taskId,
+            'title': data['title'] as String,
+            'description': data['description'] as String? ?? '',
+            'is_completed': (data['isCompleted'] as bool? ?? false) ? 1 : 0,
+            'priority': data['priority'] as String,
+            'source': data['source'] as String,
+            'user_id': user.id,
+            'created_at': (data['createdAt'] as Timestamp)
+                .toDate()
+                .toIso8601String(),
+            'updated_at': (data['updatedAt'] as Timestamp)
+                .toDate()
+                .toIso8601String(),
+            'firebase_id': doc.id,
+            'synced': 1,
+            'deleted': 0,
+          };
+
+          await db.insert(
+            'tasks',
+            taskData,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+
+          successCount++;
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error al descargar tarea: $e');
+          }
+        }
+      }
+
+      if (kDebugMode) {
+        print('Tareas descargadas: $successCount');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error al descargar tareas de Firestore: $e');
+      }
+      throw Exception('Error al descargar tareas: $e');
     }
   }
 
